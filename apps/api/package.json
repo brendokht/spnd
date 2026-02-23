@@ -1,0 +1,11 @@
+{
+  "name": "@spnd/api",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "dotnet watch",
+    "build": "dotnet build",
+    "format": "dotnet format"
+  }
+}
