@@ -12,15 +12,17 @@
     "check-types": "next typegen && tsc --noEmit"
   },
   "dependencies": {
-    "@spnd/ui": "*",
+    "@spnd/ui": "workspace:*",
     "next": "16.1.5",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },
   "devDependencies": {
-    "@spnd/eslint-config": "*",
-    "@spnd/typescript-config": "*",
+    "@spnd/eslint-config": "workspace:*",
+    "@spnd/typescript-config": "workspace:*",
     "@types/node": "^22.15.3",
+    "tailwindcss": "^4.2.1",
+    "@tailwindcss/postcss": "^4.2.1",
     "@types/react": "19.2.2",
     "@types/react-dom": "19.2.2",
     "eslint": "^9.39.1",

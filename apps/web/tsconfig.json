@@ -1,6 +1,10 @@
 {
   "extends": "@spnd/typescript-config/nextjs.json",
   "compilerOptions": {
+    "baseUrl": "./src",
+    "paths": {
+      "@spnd/web": ["./src/*"]
+    },
     "plugins": [
       {
         "name": "next"
