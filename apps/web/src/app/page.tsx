@@ -1,12 +1,12 @@
 "use client";
 
-import { Button } from "@spnd/ui/components/ui/button";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@spnd/ui/components/ui/accordion";
+import { Button } from "@spnd/ui/components/ui/button";
 
 const items = [
   {
@@ -32,7 +32,7 @@ const items = [
 export default function Home() {
   return (
     <div className="mx-auto space-y-4">
-      <h1 className="font-bold text-2xl">Welcome to Spnd!</h1>
+      <h1 className="text-2xl font-bold">Welcome to Spnd!</h1>
       <p>Personal Finance Tracking Application</p>
       <Button variant={"default"} onClick={() => alert("Hello!")}>
         Test Button!
