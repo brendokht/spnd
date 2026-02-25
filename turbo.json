@@ -16,9 +16,27 @@
     "check-types": {
       "dependsOn": ["^check-types"]
     },
+    "stop": {
+      "dependsOn": ["^stop"],
+      "cache": false,
+      "persistent": false
+    },
     "dev": {
       "cache": false,
       "persistent": true
+    },
+    "@spnd/api#dev": {
+      "dependsOn": ["@spnd/supabase#dev"],
+      "persistent": true
+    },
+    "@spnd/web#dev": {
+      "dependsOn": ["@spnd/supabase#dev"],
+      "persistent": true
+    },
+    "@spnd/supabase#dev": {
+      "dependsOn": [],
+      "cache": false,
+      "persistent": false
     }
   }
 }

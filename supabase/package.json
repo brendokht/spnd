@@ -1,0 +1,13 @@
+{
+  "name": "@spnd/supabase",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "supabase start",
+    "stop": "supabase stop"
+  },
+  "devDependencies": {
+    "supabase": "^2.75.0"
+  }
+}

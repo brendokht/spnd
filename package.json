@@ -4,6 +4,7 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
+    "stop": "turbo run stop",
     "lint": "turbo run lint",
     "format": "turbo run format",
     "check-types": "turbo run check-types"
@@ -20,6 +21,7 @@
   "packageManager": "bun@1.2.20",
   "workspaces": [
     "apps/*",
-    "packages/*"
+    "packages/*",
+    "supabase"
   ]
 }
