@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -25,8 +27,8 @@ app.MapGet("/weatherforecast", () =>
         new WeatherForecast
         (
             DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
+            RandomNumberGenerator.GetInt32(-20, 55),
+            summaries[RandomNumberGenerator.GetInt32(summaries.Length)]
         ))
         .ToArray();
     return forecast;
@@ -35,7 +37,7 @@ app.MapGet("/weatherforecast", () =>
 
 app.Run();
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
+sealed record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
 {
     public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
 }

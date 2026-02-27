@@ -6,6 +6,12 @@
   "scripts": {
     "dev": "dotnet watch",
     "build": "dotnet build",
-    "format": "dotnet format"
+    "format": "dotnet format",
+    "check-types": "dotnet build --no-restore --nologo --no-incremental"
+  },
+  "lint-staged": {
+    "*.cs": [
+      "dotnet format --include"
+    ]
   }
 }

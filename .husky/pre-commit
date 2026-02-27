@@ -1,0 +1,2 @@
+bun lint-staged --relative
+bun run check-types

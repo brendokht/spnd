@@ -11,6 +11,15 @@
     "lint": "eslint --fix --max-warnings 0",
     "check-types": "next typegen && tsc --noEmit"
   },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "bun lint --",
+      "bun format --"
+    ],
+    "*.{css,md}": [
+      "bun format --"
+    ]
+  },
   "dependencies": {
     "@spnd/ui": "workspace:*",
     "next": "16.1.5",
