@@ -1,0 +1,1 @@
+-- Seeding is handled by the API on startup (apps/api/Program.cs)

@@ -22,6 +22,8 @@
   },
   "dependencies": {
     "@spnd/ui": "workspace:*",
+    "@supabase/ssr": "^0.9",
+    "@supabase/supabase-js": "^2",
     "next": "16.1.5",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
