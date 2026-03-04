@@ -76,6 +76,9 @@ dotnet_code_quality_unused_parameters = all:suggestion
 # Suppression preferences
 dotnet_remove_unnecessary_suppression_exclusions = none
 
+# CA1515: Not applicable for ASP.NET Core apps where controllers and DI services must be public
+dotnet_diagnostic.CA1515.severity = none
+
 #### C# Coding Conventions ####
 [*.cs]
 
