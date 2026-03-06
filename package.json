@@ -8,6 +8,13 @@
     "lint": "turbo run lint",
     "format": "turbo run format",
     "check-types": "turbo run check-types",
+    "test": "turbo run test:unit test:e2e",
+    "test:e2e": "turbo run test:e2e",
+    "test:unit": "turbo run test:unit",
+    "test:watch": "turbo run test:watch",
+    "test:setup": "turbo run test:setup",
+    "test:ui": "turbo run test:ui",
+    "test:headed": "turbo run test:headed",
     "prepare": "husky",
     "lint-staged": "lint-staged"
   },

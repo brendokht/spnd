@@ -5,7 +5,7 @@
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": [".next/**", "!.next/cache/**"],
+      "outputs": [".next/**", "!.next/cache/**", "bin/**", "obj/**"],
       "env": ["NODE_ENV"]
     },
     "format": {
@@ -17,13 +17,37 @@
     "check-types": {
       "dependsOn": ["^check-types"]
     },
-    "test": {
+    "test:e2e": {
       "dependsOn": ["^build"],
-      "outputs": []
+      "outputs": ["test-results/**"],
+      "passThroughEnv": ["PLAYWRIGHT_*"],
+      "cache": true,
+      "persistent": false
     },
-    "e2e": {
-      "dependsOn": ["@spnd/web#build"],
-      "cache": false
+    "test:unit": {
+      "dependsOn": ["^build"],
+      "cache": true,
+      "persistent": false
+    },
+    "test:watch": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "persistent": true
+    },
+    "test:setup": {
+      "dependsOn": ["^build"],
+      "cache": true,
+      "persistent": false
+    },
+    "test:ui": {
+      "dependsOn": ["^build"],
+      "cache": true,
+      "persistent": false
+    },
+    "test:headed": {
+      "dependsOn": ["^build"],
+      "cache": true,
+      "persistent": false
     },
     "stop": {
       "dependsOn": ["^stop"],

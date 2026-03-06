@@ -10,7 +10,8 @@
     "format": "prettier --write .",
     "lint": "eslint --fix --max-warnings 0",
     "check-types": "next typegen && tsc --noEmit",
-    "test": "bunx jest"
+    "test:unit": "jest",
+    "test:watch": "jest --watch"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
