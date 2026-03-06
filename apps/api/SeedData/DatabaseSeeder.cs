@@ -30,6 +30,8 @@ static class DatabaseSeeder
             UpdatedAt = now,
         });
 
+        await db.SaveChangesAsync().ConfigureAwait(false);
+
         db.AuthIdentities.Add(new AuthIdentity
         {
             Id = userId,
