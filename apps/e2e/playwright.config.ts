@@ -23,6 +23,7 @@ export default defineConfig({
       name: "setup",
       testMatch: /auth\.setup\.ts/,
     },
+    // `chromium` for authenticated state
     {
       name: "chromium",
       testMatch: /home\.spec\.ts/,
@@ -32,6 +33,7 @@ export default defineConfig({
       },
       dependencies: ["setup"],
     },
+    // `chromium-public` for unauthenticated state
     {
       name: "chromium-public",
       testMatch: /login\.spec\.ts|register\.spec\.ts/,
@@ -39,7 +41,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "bun run --cwd ../web dev",
+    command: "bun run --filter=@spnd/web dev",
     url: baseURL,
     reuseExistingServer: true,
   },
