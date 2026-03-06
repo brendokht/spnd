@@ -17,6 +17,14 @@
     "check-types": {
       "dependsOn": ["^check-types"]
     },
+    "test": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "e2e": {
+      "dependsOn": ["@spnd/web#build"],
+      "cache": false
+    },
     "stop": {
       "dependsOn": ["^stop"],
       "cache": false,
