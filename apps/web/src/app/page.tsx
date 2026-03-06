@@ -22,7 +22,12 @@ export default function Home() {
         <h1 className="text-xl font-bold">Spnd</h1>
         <div className="flex items-center gap-3">
           <span className="text-sm text-gray-500">{user?.email}</span>
-          <Button variant="ghost" size="icon" onClick={signOut}>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Sign out"
+            onClick={signOut}
+          >
             <LogOut className="h-4 w-4" />
           </Button>
         </div>
