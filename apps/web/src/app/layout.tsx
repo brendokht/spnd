@@ -1,6 +1,7 @@
+import Header from "@/components/header";
+import { AuthProvider } from "@/context/auth";
 import "@spnd/ui/globals.css";
 import type { Metadata } from "next";
-import { AuthProvider } from "@/context/auth";
 
 export const metadata: Metadata = {
   title: "Spnd",
@@ -14,8 +15,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="flex min-h-dvh flex-col bg-white text-gray-900">
-        <AuthProvider>{children}</AuthProvider>
+      <body className="flex min-h-dvh flex-col bg-white p-4 text-gray-900">
+        <AuthProvider>
+          <Header />
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );
