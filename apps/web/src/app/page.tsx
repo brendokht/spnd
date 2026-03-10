@@ -1,11 +1,5 @@
 "use client";
 
 export default function Home() {
-  return (
-    <div className="space-y-6">
-      <main>
-        <p className="text-gray-400">Yeahhhhhh boiiiiii</p>
-      </main>
-    </div>
-  );
+  return <p className="text-gray-400">Yeahhhhhh boiiiiii</p>;
 }
