@@ -15,10 +15,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="flex min-h-dvh flex-col bg-white p-4 text-gray-900">
+      <body className="flex min-h-dvh flex-col bg-white px-4 py-4 text-gray-900 md:px-8">
         <AuthProvider>
           <Header />
-          {children}
+          <main className="my-8 space-y-4">{children}</main>
         </AuthProvider>
       </body>
     </html>
