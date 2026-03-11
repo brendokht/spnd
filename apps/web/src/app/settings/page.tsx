@@ -176,68 +176,84 @@ function ChangeEmail() {
   }, [user?.email]);
 
   const changeEmail = async () => {
+    console.log("changeEmail 1", emailSuccess);
     setEmailError(null);
     setEmailSuccess(false);
     setEmailLoading(true);
-    const { error } = await supabase.auth.updateUser({
-      email: newEmail,
-    });
+    const { error } = await supabase.auth.updateUser(
+      {
+        email: newEmail,
+      },
+      { emailRedirectTo: "http://localhost:3000/settings" },
+    );
     if (error) {
       setEmailError(error.message);
     } else setEmailSuccess(true);
     setEmailLoading(false);
   };
+
   return (
-    <div className="flex items-end justify-between">
-      <FieldSet className="w-full max-w-xs">
-        <FieldGroup>
-          <Field>
-            <FieldLabel htmlFor="email">
-              <Mail size={16} />
-              Email
-            </FieldLabel>
-            <Input
-              id="email"
-              type="email"
-              autoComplete="email"
-              onChange={(e) => setNewEmail(e.target.value)}
-              value={newEmail}
-              placeholder="example@spnd.com"
-            />
-            <FieldError>{emailError}</FieldError>
-          </Field>
-        </FieldGroup>
-      </FieldSet>
-      <Button
-        disabled={emailLoading || newEmail === user?.email || emailSuccess}
-        onClick={changeEmail}
-      >
-        Submit
-      </Button>
-    </div>
+    <>
+      {(emailSuccess || emailError) && (
+        <CardContent>
+          {emailSuccess && (
+            <Alert>
+              <CheckCircle2 className="h-4 w-4" />
+              <AlertDescription>
+                Emails have been sent to the old and new email address.
+              </AlertDescription>
+            </Alert>
+          )}
+          {emailError && (
+            <Alert variant={"destructive"}>
+              <CheckCircle2 className="h-4 w-4" />
+              <AlertDescription>
+                Emails have been sent to the old and new email address.
+              </AlertDescription>
+            </Alert>
+          )}
+        </CardContent>
+      )}
+      <CardFooter>
+        <div className="flex w-full items-end justify-between">
+          <FieldSet className="w-full max-w-xs">
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="email">
+                  <Mail size={16} />
+                  Email
+                </FieldLabel>
+                <Input
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  value={newEmail}
+                  placeholder="example@spnd.com"
+                />
+                <FieldError>{emailError}</FieldError>
+              </Field>
+            </FieldGroup>
+          </FieldSet>
+          <Button
+            disabled={emailLoading || newEmail === user?.email || emailSuccess}
+            onClick={changeEmail}
+          >
+            Submit
+          </Button>
+        </div>
+      </CardFooter>
+    </>
   );
 }
 
-function LinkGoogleOAuth() {
+function LinkGoogleOAuth({ hasGoogle }: { hasGoogle: boolean }) {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState<boolean>(false);
 
   const unlinkGoogle = async () => {
-    const { data, error: getIdentitiesError } =
-      await supabase.auth.getUserIdentities();
-
-    if (getIdentitiesError) {
-      setError(getIdentitiesError.message);
-      setLoading(false);
-      return;
-    }
-
-    const googleIdentity = data!.identities.find(
-      (identity) => identity.provider === "google",
-    );
-
-    if (googleIdentity) {
+    if (hasGoogle) {
       setError("Google identity found, no need to link");
       setLoading(false);
       return;
@@ -360,7 +376,7 @@ function UnlinkGoogleOAuth() {
 export default function SettingsPage() {
   const { userIdentities } = useAuth();
 
-  const hasGoogle = userIdentities?.includes("google");
+  const hasGoogle = userIdentities?.includes("google") ?? false;
   // Account security state
   const [othersSuccess, setOthersSuccess] = useState(false);
   const [securityError, setSecurityError] = useState<string | null>(null);
@@ -381,9 +397,7 @@ export default function SettingsPage() {
                 Change the email associated to your account.
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <ChangeEmail />
-            </CardContent>
+            <ChangeEmail />
           </Card>
           <Card>
             <CardHeader>
@@ -409,7 +423,11 @@ export default function SettingsPage() {
                   </Badge>
                 </ItemContent>
                 <ItemActions>
-                  {hasGoogle ? <UnlinkGoogleOAuth /> : <LinkGoogleOAuth />}
+                  {hasGoogle ? (
+                    <UnlinkGoogleOAuth />
+                  ) : (
+                    <LinkGoogleOAuth hasGoogle={hasGoogle} />
+                  )}
                 </ItemActions>
               </Item>
             </CardContent>

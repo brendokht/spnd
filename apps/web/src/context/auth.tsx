@@ -26,48 +26,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      // Refresh session if there is a new email, in an attempt to visually show the correct email
-      if (data.session?.user.new_email)
-        supabase.auth.refreshSession().then(({ data }) => {
-          setSession(data.session);
-          setUser(data.session?.user ?? null);
-        });
-      else {
-        setSession(data.session);
-        setUser(data.session?.user ?? null);
-      }
-      setLoading(false);
-    });
-
-    supabase.auth.getUserIdentities().then(({ data, error }) => {
-      if (error) {
-        console.error("getUserIdentities Error", error);
-        return;
-      }
-      if (data?.identities) {
-        setUserIdentities(data.identities.map((identity) => identity.provider));
-      }
-    });
-
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "INITIAL_SESSION") {
-        setSession(session);
-        setUser(session?.user ?? null);
-      } else if (event === "SIGNED_IN") {
-        setSession(session);
-        setUser(session?.user ?? null);
-      } else if (event === "SIGNED_OUT") {
+    } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      console.log(`Auth Event: ${event}`, currentSession);
+
+      if (event === "SIGNED_OUT") {
         setSession(null);
         setUser(null);
-      } else if (event === "USER_UPDATED") {
-        setSession(session);
-        setUser(session?.user ?? null);
-      } else if (event === "TOKEN_REFRESHED") {
-        setSession(session);
-        setUser(session?.user ?? null);
+        setUserIdentities([]);
+        setLoading(false);
+      } else {
+        // Perform blocking network request to ensure data is up-to-date
+        // Supabase JS library has issue with Locking API, and would cause other functions to hang/fail
+        // https://github.com/supabase/supabase-js/issues/2013
+        setSession(currentSession);
+        supabase.auth.getUser().then(({ data: { user } }) => {
+          setUser(user);
+          setUserIdentities(
+            user?.identities?.map((identity) => identity.provider) ?? [],
+          );
+        });
+        setUser(currentSession?.user ?? null);
+        setUserIdentities(
+          currentSession?.user?.identities?.map(
+            (identity) => identity.provider,
+          ) ?? [],
+        );
       }
     });
 
