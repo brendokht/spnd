@@ -46,7 +46,14 @@ import {
   TabsList,
   TabsTrigger,
 } from "@spnd/ui/components/ui/tabs";
-import { AlertCircle, CheckCircle2, Info, Mail, SquarePen } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Info,
+  Loader2,
+  Mail,
+  SquarePen,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -109,6 +116,7 @@ function SignOutGlobalDialog({
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction disabled={loading} onClick={signOutEverywhere}>
+            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Continue
           </AlertDialogAction>
         </AlertDialogFooter>
@@ -154,6 +162,7 @@ function SignOutOthersDialog({
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction disabled={loading} onClick={signOutOthers}>
+            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Continue
           </AlertDialogAction>
         </AlertDialogFooter>
@@ -231,6 +240,7 @@ function ChangeEmail() {
             disabled={emailLoading || newEmail === user?.email || emailSuccess}
             onClick={changeEmail}
           >
+            {emailLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Submit
           </Button>
         </div>
