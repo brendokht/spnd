@@ -2,19 +2,20 @@
 
 import { supabase } from "@/lib/supabase";
 import type { Session, User } from "@supabase/supabase-js";
+import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { createContext, useContext, useEffect, useState } from "react";
 
 interface AuthContextType {
   user: User | null;
-  userIdentities: Array<string> | null;
+  userIdentities: Array<string>;
   session: Session | null;
   loading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
-  userIdentities: null,
+  userIdentities: [],
   session: null,
   loading: true,
 });
@@ -24,24 +25,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userIdentities, setUserIdentities] = useState<Array<string>>([]);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
-      console.log(`Auth Event: ${event}`, currentSession);
-
+      setLoading(true);
       if (event === "SIGNED_OUT") {
         setSession(null);
         setUser(null);
         setUserIdentities([]);
-        setLoading(false);
       } else {
         // Perform blocking network request to ensure data is up-to-date
         // Supabase JS library has issue with Locking API, and would cause other functions to hang/fail
         // https://github.com/supabase/supabase-js/issues/2013
         setSession(currentSession);
-        supabase.auth.getUser().then(({ data: { user } }) => {
+        supabase.auth.getUser().then(({ data: { user }, error }) => {
+          if (!user || error) {
+            // Ensure User exists and there is no errors
+            router.push("/login");
+          }
           setUser(user);
           setUserIdentities(
             user?.identities?.map((identity) => identity.provider) ?? [],
@@ -54,10 +58,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           ) ?? [],
         );
       }
+      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [router]);
 
   return (
     <AuthContext.Provider value={{ user, userIdentities, session, loading }}>
