@@ -26,7 +26,8 @@ export default defineConfig({
     // `chromium` for authenticated state
     {
       name: "chromium",
-      testMatch: /home\.spec\.ts/,
+      // Execure all tests other than Login, Register, and Auth Setup
+      testIgnore: /login\.spec\.ts|register\.spec\.ts|auth\.setup\.ts/,
       use: {
         ...devices["Desktop Chrome"],
         storageState: STORAGE_STATE,

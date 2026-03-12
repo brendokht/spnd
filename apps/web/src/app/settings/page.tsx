@@ -188,30 +188,22 @@ function ChangeEmail() {
     );
     if (error) {
       setEmailError(error.message);
+      setEmailSuccess(false);
+      return;
     } else setEmailSuccess(true);
     setEmailLoading(false);
   };
 
   return (
     <>
-      {(emailSuccess || emailError) && (
+      {emailSuccess && (
         <CardContent>
-          {emailSuccess && (
-            <Alert>
-              <CheckCircle2 className="h-4 w-4" />
-              <AlertDescription>
-                Emails have been sent to the old and new email address.
-              </AlertDescription>
-            </Alert>
-          )}
-          {emailError && (
-            <Alert variant={"destructive"}>
-              <CheckCircle2 className="h-4 w-4" />
-              <AlertDescription>
-                Emails have been sent to the old and new email address.
-              </AlertDescription>
-            </Alert>
-          )}
+          <Alert>
+            <CheckCircle2 className="h-4 w-4" />
+            <AlertDescription>
+              Emails have been sent to the old and new email address.
+            </AlertDescription>
+          </Alert>
         </CardContent>
       )}
       <CardFooter>
@@ -279,8 +271,8 @@ function LinkGoogleOAuth({ hasGoogle }: { hasGoogle: boolean }) {
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger
         render={
-          <Button variant="outline" size={"icon"}>
-            <SquarePen />
+          <Button variant="outline">
+            <SquarePen /> Link
           </Button>
         }
       />
@@ -348,8 +340,8 @@ function UnlinkGoogleOAuth() {
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger
         render={
-          <Button variant="outline" size={"icon"}>
-            <SquarePen />
+          <Button variant="outline">
+            <SquarePen /> Unlink
           </Button>
         }
       />
@@ -401,7 +393,7 @@ export default function SettingsPage() {
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle>Sign-in methods</CardTitle>
+              <CardTitle>Sign-in Methods</CardTitle>
               <CardDescription>
                 The ways you can sign in to your account.
               </CardDescription>
@@ -446,7 +438,7 @@ export default function SettingsPage() {
         <TabsContent value="security">
           <Card>
             <CardHeader>
-              <CardTitle>Account security</CardTitle>
+              <CardTitle>Account Security</CardTitle>
               <CardDescription>Manage your active sessions.</CardDescription>
             </CardHeader>
             {securityError ||
