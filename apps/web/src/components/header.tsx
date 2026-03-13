@@ -1,82 +1,42 @@
-"use client";
-
-import { useAuth } from "@/context/auth";
-import { createClient } from "@/lib/supabase/client";
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from "@spnd/ui/components/ui/avatar";
-import { Button } from "@spnd/ui/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@spnd/ui/components/ui/dropdown-menu";
-import { Cog, LogOut } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
+import { Skeleton } from "@spnd/ui/components/ui/skeleton";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import UserMenu from "./user-menu";
 
-export default function Header() {
-  const router = useRouter();
-  const { user, loading } = useAuth();
-  const supabase = createClient();
+export function HeaderSkeleton() {
+  return (
+    <header className="flex items-center justify-between">
+      <Link href="/" className="text-xl font-bold">
+        Spnd
+      </Link>
+      <div className="flex items-center gap-3">
+        <Skeleton className="h-4 w-44" />
+        <Skeleton className="size-9 shrink-0 rounded-full" />
+      </div>
+    </header>
+  );
+}
 
-  const signOut = async () => {
-    await supabase.auth.signOut();
-    router.push("/login");
-  };
+export async function Header() {
+  const supabase = await createClient();
+
+  await new Promise((res) => setTimeout(res, 250));
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   return (
     <header className="flex items-center justify-between">
       <Link href="/" className="text-xl font-bold">
         Spnd
       </Link>
-      {user && !loading && (
-        <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3">
+        {user?.email && (
           <span className="text-sm text-gray-500">{user.email}</span>
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button variant="ghost" size="icon" className="rounded-full">
-                  <Avatar>
-                    <AvatarImage
-                      src={user?.user_metadata["avatar_url"]}
-                      alt="shadcn"
-                    />
-                    <AvatarFallback>
-                      {user.email?.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                </Button>
-              }
-            />
-            <DropdownMenuContent className="w-40" align="start">
-              <DropdownMenuGroup>
-                <DropdownMenuItem
-                  nativeButton={false}
-                  render={
-                    <Link href="/settings">
-                      <Cog />
-                      Settings
-                    </Link>
-                  }
-                ></DropdownMenuItem>
-              </DropdownMenuGroup>
-              <DropdownMenuSeparator />
-              <DropdownMenuGroup>
-                <DropdownMenuItem onClick={signOut} variant="destructive">
-                  <LogOut />
-                  Log out
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      )}
+        )}
+        <UserMenu user={user} />
+      </div>
     </header>
   );
 }
