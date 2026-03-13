@@ -1,18 +1,8 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/client";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import { AuthProvider, useAuth } from "./auth";
 
 const mockUnsubscribe = jest.fn();
-
-jest.mock("@/lib/supabase", () => ({
-  supabase: {
-    auth: {
-      getUser: jest.fn(),
-      onAuthStateChange: jest.fn(),
-    },
-  },
-}));
-
 const mockPush = jest.fn();
 
 jest.mock("next/navigation", () => ({
@@ -21,7 +11,19 @@ jest.mock("next/navigation", () => ({
   })),
 }));
 
-const mockSupabase = supabase as jest.Mocked<typeof supabase>;
+jest.mock("@/lib/supabase/client", () => {
+  const mockSupabaseClient = {
+    auth: {
+      onAuthStateChange: jest.fn(),
+      getUser: jest.fn(),
+    },
+  };
+  return {
+    createClient: jest.fn(() => mockSupabaseClient),
+  };
+});
+
+const mockSupabase = createClient();
 
 // Re-usable test consumer that exposes all AuthContext values
 function TestConsumer() {

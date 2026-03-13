@@ -1,6 +1,6 @@
+import { createClient } from "@/lib/supabase/client";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { supabase } from "@/lib/supabase";
 import RegisterPage from "./page";
 
 const mockPush = jest.fn();
@@ -10,17 +10,20 @@ jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush, refresh: mockRefresh }),
 }));
 
-jest.mock("@/lib/supabase", () => ({
-  supabase: {
+jest.mock("@/lib/supabase/client", () => {
+  const mockSupabaseClient = {
     auth: {
       signInWithOtp: jest.fn(),
       verifyOtp: jest.fn(),
       signInWithOAuth: jest.fn(),
     },
-  },
-}));
+  };
+  return {
+    createClient: jest.fn(() => mockSupabaseClient),
+  };
+});
 
-const mockSupabase = supabase as jest.Mocked<typeof supabase>;
+const mockSupabase = createClient();
 
 beforeEach(() => {
   jest.clearAllMocks();

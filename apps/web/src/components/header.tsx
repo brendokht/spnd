@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@/context/auth";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/client";
 import {
   Avatar,
   AvatarFallback,
@@ -23,6 +23,7 @@ import { useRouter } from "next/navigation";
 export default function Header() {
   const router = useRouter();
   const { user, loading } = useAuth();
+  const supabase = createClient();
 
   const signOut = async () => {
     await supabase.auth.signOut();

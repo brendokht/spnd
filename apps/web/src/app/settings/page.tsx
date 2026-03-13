@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/context/auth";
 import { appUrl } from "@/lib/config";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/client";
 import { Alert, AlertDescription } from "@spnd/ui/components/ui/alert";
 import {
   AlertDialog,
@@ -59,6 +59,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 // Google icon as an inline SVG component
+const supabase = createClient();
 function GoogleIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
