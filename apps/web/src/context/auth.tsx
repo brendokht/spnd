@@ -41,11 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Supabase JS library has issue with Locking API, and would cause other functions to hang/fail
         // https://github.com/supabase/supabase-js/issues/2013
         setSession(currentSession);
-        supabase.auth.getUser().then(({ data: { user }, error }) => {
-          if (!user || error) {
-            // Ensure User exists and there is no errors
-            router.push("/login");
-          }
+        supabase.auth.getUser().then(({ data: { user } }) => {
           setUser(user);
           setUserIdentities(
             user?.identities?.map((identity) => identity.provider) ?? [],
