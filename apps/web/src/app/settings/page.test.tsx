@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/client";
 import {
   duplicateEmailError,
   exampleUser,
@@ -21,18 +21,21 @@ jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush, refresh: mockRefresh }),
 }));
 
-jest.mock("@/lib/supabase", () => ({
-  supabase: {
+jest.mock("@/lib/supabase/client", () => {
+  const mockSupabaseClient = {
     auth: {
-      signOut: jest.fn(),
       updateUser: jest.fn(),
       linkIdentity: jest.fn(),
       unlinkIdentity: jest.fn(),
-      getUserIdentities: jest.fn(),
       refreshSession: jest.fn(),
+      getUserIdentities: jest.fn(),
+      signOut: jest.fn(),
     },
-  },
-}));
+  };
+  return {
+    createClient: jest.fn(() => mockSupabaseClient),
+  };
+});
 
 // Default: user with Google linked
 jest.mock("@/context/auth", () => ({
@@ -41,7 +44,7 @@ jest.mock("@/context/auth", () => ({
   })),
 }));
 
-const mockSupabase = supabase as jest.Mocked<typeof supabase>;
+const mockSupabase = createClient();
 
 // Helper to get a mocked useAuth that can be overridden per-test
 function getMockUseAuth() {
@@ -192,7 +195,7 @@ describe("SettingsPage", () => {
         ).toBeInTheDocument();
       });
 
-      it("calls linkIdentity on Continue and closes the dialog", async () => {
+      it("calls linkIdentity on continue and closes the dialog", async () => {
         (mockSupabase.auth.linkIdentity as jest.Mock).mockResolvedValue({
           error: null,
         });
@@ -241,7 +244,7 @@ describe("SettingsPage", () => {
         ).toBeInTheDocument();
       });
 
-      // TODO: Fix when possible; Suite does not run due to issue within this test
+      // TODO: Fix when possible
       // it("calls getUserIdentities and unlinkIdentity on Continue", async () => {
       //   const googleIdentity = { provider: "google", id: "gid-1" };
       //   (mockSupabase.auth.getUserIdentities as jest.Mock).mockResolvedValue({

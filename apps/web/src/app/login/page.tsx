@@ -1,9 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 import { Alert, AlertDescription } from "@spnd/ui/components/ui/alert";
 import { Button } from "@spnd/ui/components/ui/button";
 import {
@@ -16,7 +13,10 @@ import {
 } from "@spnd/ui/components/ui/card";
 import { Input } from "@spnd/ui/components/ui/input";
 import { Label } from "@spnd/ui/components/ui/label";
-import { supabase } from "@/lib/supabase";
+import { AlertCircle, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -29,6 +29,8 @@ export default function LoginPage() {
   const [magicLoading, setMagicLoading] = useState(false);
   const [otpLoading, setOtpLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+
+  const supabase = createClient();
 
   const sendMagicLink = async () => {
     setError(null);
