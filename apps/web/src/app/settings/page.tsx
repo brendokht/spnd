@@ -185,7 +185,6 @@ function ChangeEmail() {
   }, [user?.email]);
 
   const changeEmail = async () => {
-    console.log("changeEmail 1", emailSuccess);
     setEmailError(null);
     setEmailSuccess(false);
     setEmailLoading(true);
@@ -254,7 +253,7 @@ function LinkGoogleOAuth({ hasGoogle }: { hasGoogle: boolean }) {
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState<boolean>(false);
 
-  const unlinkGoogle = async () => {
+  const linkGoogle = async () => {
     if (hasGoogle) {
       setError("Google identity found, no need to link");
       setLoading(false);
@@ -281,8 +280,8 @@ function LinkGoogleOAuth({ hasGoogle }: { hasGoogle: boolean }) {
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger
         render={
-          <Button variant="outline">
-            <SquarePen /> Link
+          <Button data-testid="google-link-btn" variant="outline">
+            <SquarePen />
           </Button>
         }
       />
@@ -296,7 +295,7 @@ function LinkGoogleOAuth({ hasGoogle }: { hasGoogle: boolean }) {
         <p className="text-destructive text-sm">{error}</p>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction disabled={loading} onClick={unlinkGoogle}>
+          <AlertDialogAction disabled={loading} onClick={linkGoogle}>
             Continue
           </AlertDialogAction>
         </AlertDialogFooter>
@@ -350,8 +349,8 @@ function UnlinkGoogleOAuth() {
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger
         render={
-          <Button variant="outline">
-            <SquarePen /> Unlink
+          <Button data-testid="google-unlink-btn" variant="outline">
+            <SquarePen />
           </Button>
         }
       />

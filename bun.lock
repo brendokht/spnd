@@ -1,6 +1,5 @@
 {
   "lockfileVersion": 1,
-  "configVersion": 0,
   "workspaces": {
     "": {
       "name": "spnd",
@@ -38,6 +37,7 @@
         "react-dom": "^19.2.0",
       },
       "devDependencies": {
+        "@spnd/constants": "workspace:*",
         "@spnd/eslint-config": "workspace:*",
         "@spnd/typescript-config": "workspace:*",
         "@tailwindcss/postcss": "^4.2.1",
@@ -54,6 +54,15 @@
         "jest-environment-jsdom": "^30.2.0",
         "tailwindcss": "^4.2.1",
         "ts-node": "^10.9.2",
+        "typescript": "5.9.2",
+      },
+    },
+    "packages/constants": {
+      "name": "@spnd/constants",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@spnd/eslint-config": "workspace:*",
+        "@spnd/typescript-config": "workspace:*",
         "typescript": "5.9.2",
       },
     },
@@ -445,6 +454,8 @@
     "@sinonjs/fake-timers": ["@sinonjs/fake-timers@13.0.5", "", { "dependencies": { "@sinonjs/commons": "^3.0.1" } }, "sha512-36/hTbH2uaWuGVERyC6da9YwGWnzUZXuPro/F2LfsdOsLnCojz/iSH8MxUt/FD2S5XBSVPhmArFUXcpCQ2Hkiw=="],
 
     "@spnd/api": ["@spnd/api@workspace:apps/api"],
+
+    "@spnd/constants": ["@spnd/constants@workspace:packages/constants"],
 
     "@spnd/e2e": ["@spnd/e2e@workspace:apps/e2e"],
 

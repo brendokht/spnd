@@ -1,0 +1,14 @@
+{
+  "name": "@spnd/constants",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "exports": {
+    "./tests": "./src/tests/index.ts"
+  },
+  "devDependencies": {
+    "typescript": "5.9.2",
+    "@spnd/typescript-config": "workspace:*",
+    "@spnd/eslint-config": "workspace:*"
+  }
+}
