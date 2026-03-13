@@ -56,7 +56,7 @@ test.describe("Settings page (authenticated)", () => {
       page,
     }) => {
       await page.goto("/settings");
-      await page.getByRole("button", { name: /link/i }).click();
+      await page.getByTestId("google-link-btn").click();
       await expect(
         page.getByText(/would you like to link google?./i),
       ).toBeVisible();
@@ -83,7 +83,7 @@ test.describe("Settings page (authenticated)", () => {
       );
 
       // Open the link dialog and confirm
-      await page.getByRole("button", { name: /link/i }).click();
+      await page.getByTestId("google-link-btn").click();
       await expect(
         page.getByText(/would you like to link google?./i),
       ).toBeVisible();
@@ -159,12 +159,12 @@ test.describe("Settings page (authenticated)", () => {
       await page.waitForLoadState("networkidle");
 
       // "Unlink" should be visible instead of "Link"
-      await expect(page.getByRole("button", { name: /unlink/i })).toBeVisible();
+      await expect(page.getByTestId("google-unlink-btn")).toBeVisible();
       await expect(
         page.getByRole("button", { name: /^link$/i }),
       ).not.toBeVisible();
 
-      await page.getByRole("button", { name: /unlink/i }).click();
+      await page.getByTestId("google-unlink-btn").click();
       await expect(
         page.getByText(/would you like to unlink google?/i),
       ).toBeVisible();
@@ -188,7 +188,7 @@ test.describe("Settings page (authenticated)", () => {
       await page.goto("/settings");
       await page.waitForLoadState("networkidle");
 
-      await page.getByRole("button", { name: /unlink/i }).click();
+      await page.getByTestId("google-unlink-btn").click();
       await expect(
         page.getByText(/would you like to unlink google?/i),
       ).toBeVisible();
