@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 
-export default async function Home() {
+export default async function HomePage() {
   const supabase = await createClient();
 
   const {
@@ -9,12 +9,10 @@ export default async function Home() {
   } = await supabase.auth.getUser();
 
   if (error) {
-    console.error(error.message);
     return "Unauthorized";
   }
 
   if (!user) {
-    console.error("No user found");
     return "User not found";
   }
 

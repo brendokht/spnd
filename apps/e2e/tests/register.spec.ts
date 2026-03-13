@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 test.use({ storageState: { cookies: [], origins: [] } }); // unauthenticated
 
@@ -20,7 +20,7 @@ test.describe("Register page", () => {
 
   test("submitting email reveals OTP input section", async ({ page }) => {
     await page.goto("/register");
-    await page.getByLabel(/email/i).fill("new@example.com");
+    await page.getByLabel(/email/i).fill("register@example.com");
     await page.getByRole("button", { name: /continue with email/i }).click();
     await expect(page.getByPlaceholder(/6-digit code/i)).toBeVisible();
     await expect(page.getByRole("button", { name: /verify/i })).toBeVisible();
