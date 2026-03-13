@@ -17,7 +17,7 @@ export default async function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="flex min-h-dvh flex-col bg-white px-4 py-4 text-gray-900 md:px-8">
+      <body className="dark flex min-h-dvh flex-col px-4 py-4 md:px-8">
         <AuthProvider>
           <TooltipProvider>
             <Suspense fallback={<HeaderSkeleton />}>
