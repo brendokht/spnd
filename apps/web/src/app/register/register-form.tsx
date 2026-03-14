@@ -1,157 +1,254 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
+import {
+  AuthFormState,
+  googleOAuthLogin,
+  sendMagicLink,
+  verifyOtp,
+} from "@/app/actions/auth";
+import { zodResolver } from "@hookform/resolvers/zod";
+import type {
+  MagicLinkSchemaType,
+  OtpSchemaType,
+} from "@spnd/shared-types/auth";
+import { MagicLinkSchema, OtpSchema } from "@spnd/shared-types/auth";
 import { GoogleIcon } from "@spnd/ui/components/company-icons/google";
-import { Alert, AlertDescription } from "@spnd/ui/components/ui/alert";
 import { Button } from "@spnd/ui/components/ui/button";
+import {
+  Field,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@spnd/ui/components/ui/field";
 import { Input } from "@spnd/ui/components/ui/input";
-import { Label } from "@spnd/ui/components/ui/label";
-import { Separator } from "@spnd/ui/components/ui/separator";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSeparator,
+  InputOTPSlot,
+} from "@spnd/ui/components/ui/input-otp";
 import { Spinner } from "@spnd/ui/components/ui/spinner";
-import { AlertCircle } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-
+import { REGEXP_ONLY_DIGITS } from "input-otp";
+import { startTransition, useActionState, useRef } from "react";
+import { Controller, useForm } from "react-hook-form";
 export default function RegisterForm() {
-  const router = useRouter();
-  const supabase = createClient();
+  const [magicLinkState, magicLinkAction, magicLinkPending] = useActionState(
+    async (state: AuthFormState | undefined, payload: FormData | null) => {
+      /*
+       * Normally would just pass the Server Action, however we need a way
+       * to reset the state.
+       */
+      if (payload === null) {
+        return {
+          success: false,
+          message: "",
+          errors: [],
+        };
+      }
 
-  const [email, setEmail] = useState("");
-  const [otp, setOtp] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [info, setInfo] = useState<"sent" | null>(null);
-  const [magicLoading, setMagicLoading] = useState(false);
-  const [otpLoading, setOtpLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
+      const response = await sendMagicLink(state, payload);
 
-  const sendMagicLink = async () => {
-    setError(null);
-    setInfo(null);
-    setMagicLoading(true);
-    const { error: err } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      return response;
+    },
+    {
+      success: false,
+      message: "",
+      errors: [],
+    },
+  );
+  const [verifyOtpState, verifyOtpAction, verifyOtpPending] = useActionState(
+    async (state: AuthFormState | undefined, payload: FormData | null) => {
+      /*
+       * Normally would just pass the Server Action, however we need a way
+       * to reset the state.
+       */
+      if (payload === null) {
+        return {
+          success: false,
+          message: "",
+          errors: [],
+        };
+      }
+
+      const response = await verifyOtp(state, payload);
+
+      return response;
+    },
+    { success: false, message: "", errors: [] },
+  );
+
+  const magicLinkForm = useForm<MagicLinkSchemaType>({
+    resolver: zodResolver(MagicLinkSchema),
+    defaultValues: {
+      email: "",
+    },
+    mode: "all",
+  });
+
+  const otpForm = useForm<OtpSchemaType>({
+    resolver: zodResolver(OtpSchema),
+    defaultValues: {
+      email: "",
+      otp: "",
+    },
+    mode: "all",
+  });
+
+  const magicLinkFormRef = useRef<HTMLFormElement>(null);
+  const verifyOtpFormRef = useRef<HTMLFormElement>(null);
+
+  function magicLinkOnSubmit(data: MagicLinkSchemaType) {
+    otpForm.setValue("email", data.email);
+    startTransition(() =>
+      magicLinkAction(new FormData(magicLinkFormRef.current!)),
+    );
+  }
+
+  function otpOnSubmit() {
+    startTransition(() =>
+      verifyOtpAction(new FormData(verifyOtpFormRef.current!)),
+    );
+  }
+
+  function resetForms() {
+    otpForm.reset();
+    magicLinkForm.reset();
+    startTransition(() => {
+      magicLinkAction(null);
+      verifyOtpAction(null);
     });
-    if (err) setError(err.message);
-    else setInfo("sent");
-    setMagicLoading(false);
-  };
-
-  const verifyOtp = async () => {
-    setError(null);
-    setOtpLoading(true);
-    const { error: err } = await supabase.auth.verifyOtp({
-      email,
-      token: otp,
-      type: "email",
-    });
-    if (err) {
-      setError(err.message);
-      setOtpLoading(false);
-    } else {
-      router.refresh();
-      router.push("/");
-    }
-  };
-
-  const signUpWithGoogle = async () => {
-    setError(null);
-    setGoogleLoading(true);
-    const { error: err } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
-    });
-    if (err) {
-      setError(err.message);
-      setGoogleLoading(false);
-    }
-  };
+  }
 
   return (
     <>
-      {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      {info === "sent" && (
-        <Alert>
-          <AlertDescription className="space-y-3">
-            <p>
-              <span className="font-medium">Magic link sent!</span> Check your
-              email or enter the code below.
-              {process.env.NODE_ENV === "development" && (
+      {!magicLinkState.success ? (
+        <form
+          id="magic-link"
+          ref={magicLinkFormRef}
+          action={magicLinkAction}
+          onSubmit={(e) => magicLinkForm.handleSubmit(magicLinkOnSubmit)(e)}
+          className="space-y-4"
+        >
+          <FieldGroup>
+            <Controller
+              name="email"
+              control={magicLinkForm.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor={field.name}>Email</FieldLabel>
+                  <Input
+                    {...field}
+                    id={field.name}
+                    aria-invalid={fieldState.invalid}
+                    placeholder="new@example.com"
+                    autoComplete="email"
+                  />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                </Field>
+              )}
+            />
+          </FieldGroup>
+          <Button
+            className="w-full"
+            type="submit"
+            form="magic-link"
+            disabled={magicLinkPending || !magicLinkForm.formState.isValid}
+          >
+            Send Magic Link
+            {magicLinkPending && <Spinner />}
+          </Button>
+        </form>
+      ) : (
+        <form
+          id="otp"
+          ref={verifyOtpFormRef}
+          action={verifyOtpAction}
+          onSubmit={(e) => otpForm.handleSubmit(otpOnSubmit)(e)}
+        >
+          <FieldGroup>
+            <Controller
+              name="email"
+              control={otpForm.control}
+              render={({ field }) => (
                 <>
-                  <a
-                    href="http://localhost:54324"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline underline-offset-4 hover:text-blue-600!"
-                  >
-                    Open Inbucket
-                  </a>
+                  <Input {...field} type="hidden" />
                 </>
               )}
-            </p>
-            <div className="flex gap-2">
-              <Input
-                placeholder="6-digit code"
-                value={otp}
-                onChange={(e) =>
-                  setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
-                }
-                onKeyDown={(e) =>
-                  e.key === "Enter" && otp.length === 6 && verifyOtp()
-                }
-              />
+            />
+            <Controller
+              name="otp"
+              control={otpForm.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor={field.name}>One-time Code</FieldLabel>
+                  <InputOTP
+                    {...field}
+                    id={field.name}
+                    aria-invalid={fieldState.invalid}
+                    value={field.value}
+                    onChange={(e) => {
+                      field.onChange(e);
+                      otpForm.setValue("otp", e);
+                    }}
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                    required
+                    pattern={REGEXP_ONLY_DIGITS}
+                  >
+                    <InputOTPGroup className="*:data-[slot=input-otp-slot]:h-12 *:data-[slot=input-otp-slot]:w-12 *:data-[slot=input-otp-slot]:text-xl">
+                      <InputOTPSlot index={0} />
+                      <InputOTPSlot index={1} />
+                      <InputOTPSlot index={2} />
+                    </InputOTPGroup>
+                    <InputOTPSeparator className="mx-3" />
+                    <InputOTPGroup className="*:data-[slot=input-otp-slot]:h-12 *:data-[slot=input-otp-slot]:w-12 *:data-[slot=input-otp-slot]:text-xl">
+                      <InputOTPSlot index={3} />
+                      <InputOTPSlot index={4} />
+                      <InputOTPSlot index={5} />
+                    </InputOTPGroup>
+                  </InputOTP>
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                  {verifyOtpState.errors &&
+                    verifyOtpState.errors.map((error) => (
+                      <FieldError key={error}>{error}</FieldError>
+                    ))}
+                </Field>
+              )}
+            />
+            <Field>
               <Button
-                onClick={verifyOtp}
-                disabled={otpLoading || otp.length !== 6}
-                className="shrink-0"
+                type="submit"
+                form="otp"
+                disabled={verifyOtpPending || !otpForm.formState.isValid}
               >
-                {otpLoading ? <Spinner /> : "Verify"}
+                Verify
+                {verifyOtpPending && <Spinner />}
               </Button>
-            </div>
-          </AlertDescription>
-        </Alert>
+              <Button
+                disabled={verifyOtpPending}
+                onClick={resetForms}
+                variant={"destructive"}
+              >
+                Reset
+              </Button>
+            </Field>
+          </FieldGroup>
+        </form>
       )}
-
-      <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
-        <Input
-          id="email"
-          type="email"
-          placeholder="you@example.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && email && sendMagicLink()}
-        />
-      </div>
-
-      <Button
-        className="hover:bg-primary/70 w-full cursor-pointer"
-        onClick={sendMagicLink}
-        disabled={magicLoading || !email}
-      >
-        {magicLoading && <Spinner />}
-        Continue with email
-      </Button>
-
       <div className="flex items-center gap-3">
-        <Separator className="flex-1" />
-        <span className="text-muted-foreground text-xs">or</span>
-        <Separator className="flex-1" />
+        <span className="text-muted-foreground mx-auto text-xs">or</span>
       </div>
-
       <Button
         variant="outline"
-        className="w-full cursor-pointer hover:border-gray-400 hover:bg-gray-100"
-        onClick={signUpWithGoogle}
-        disabled={googleLoading}
+        className="w-full"
+        onClick={googleOAuthLogin}
+        disabled={magicLinkPending || verifyOtpPending}
       >
-        {googleLoading ? <Spinner /> : <GoogleIcon />}
+        <GoogleIcon />
         Continue with Google
       </Button>
     </>
