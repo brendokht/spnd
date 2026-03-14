@@ -20,8 +20,6 @@ export function HeaderSkeleton() {
 export async function Header() {
   const supabase = await createClient();
 
-  await new Promise((res) => setTimeout(res, 250));
-
   const {
     data: { user },
   } = await supabase.auth.getUser();

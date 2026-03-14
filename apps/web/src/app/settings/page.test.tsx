@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { createClient as createServerClient } from "@/lib/supabase/server";
 import {
   duplicateEmailError,
   exampleUser,
@@ -10,9 +11,14 @@ import {
   soleIdentityError,
   takenUser,
 } from "@spnd/constants/tests";
+import { User } from "@supabase/supabase-js";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import SettingsPage from "./page";
+
+type RecursivePartial<T> = {
+  [P in keyof T]?: RecursivePartial<T[P]>;
+};
 
 const mockPush = jest.fn();
 const mockRefresh = jest.fn();
@@ -20,6 +26,17 @@ const mockRefresh = jest.fn();
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush, refresh: mockRefresh }),
 }));
+
+jest.mock("@/lib/supabase/server", () => {
+  const mockSupabaseClient = {
+    auth: {
+      getUser: jest.fn(),
+    },
+  };
+  return {
+    createClient: jest.fn(() => Promise.resolve(mockSupabaseClient)),
+  };
+});
 
 jest.mock("@/lib/supabase/client", () => {
   const mockSupabaseClient = {
@@ -37,61 +54,60 @@ jest.mock("@/lib/supabase/client", () => {
   };
 });
 
-// Default: user with Google linked
-jest.mock("@/context/auth", () => ({
-  useAuth: jest.fn(() => ({
-    exampleUser,
-  })),
-}));
-
 const mockSupabase = createClient();
 
-// Helper to get a mocked useAuth that can be overridden per-test
-function getMockUseAuth() {
-  return jest.requireMock("@/context/auth").useAuth as jest.Mock;
+async function setMockUser({ user }: { user: RecursivePartial<User> }) {
+  const { auth } = await (createServerClient as jest.Mock)();
+  (auth.getUser as jest.Mock).mockResolvedValue({
+    data: {
+      user: user,
+    },
+    error: null,
+  });
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   jest.clearAllMocks();
   // Reset to default: Google linked
-  getMockUseAuth().mockReturnValue(exampleUser);
+  setMockUser(exampleUser);
 });
 
 describe("SettingsPage", () => {
-  it("renders the Settings heading", () => {
-    render(<SettingsPage />);
+  it("renders the Settings heading", async () => {
+    render(await SettingsPage());
     expect(
       screen.getByRole("heading", { name: /settings/i }),
     ).toBeInTheDocument();
   });
 
-  it("renders Account and Security tabs", () => {
-    render(<SettingsPage />);
+  it("renders Account and Security tabs", async () => {
+    render(await SettingsPage());
+
     expect(screen.getByRole("tab", { name: /account/i })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /security/i })).toBeInTheDocument();
   });
 
   describe("Change Email section", () => {
-    it("renders the Change Email card heading", () => {
-      render(<SettingsPage />);
+    it("renders the Change Email card heading", async () => {
+      render(await SettingsPage());
       expect(screen.getByText(/change email/i)).toBeInTheDocument();
     });
 
-    it("renders the email input pre-filled with the user's current email", () => {
-      render(<SettingsPage />);
+    it("renders the email input pre-filled with the user's current email", async () => {
+      render(await SettingsPage());
       const input = screen.getByLabelText(/email/i);
       expect(input).toBeInTheDocument();
       expect(input).toHaveValue("user@example.com");
     });
 
-    it("disables the Submit button when the email is unchanged", () => {
-      render(<SettingsPage />);
+    it("disables the Submit button when the email is unchanged", async () => {
+      render(await SettingsPage());
       expect(screen.getByRole("button", { name: /^submit$/i })).toBeDisabled();
     });
 
     it("enables the Submit button when the email is changed", async () => {
       const user = userEvent.setup({ delay: null });
-      render(<SettingsPage />);
+      render(await SettingsPage());
 
       const input = screen.getByLabelText(/email/i);
       await user.clear(input);
@@ -105,7 +121,7 @@ describe("SettingsPage", () => {
         error: null,
       });
       const user = userEvent.setup({ delay: null });
-      render(<SettingsPage />);
+      render(await SettingsPage());
 
       const input = screen.getByLabelText(/email/i);
       await user.clear(input);
@@ -132,7 +148,7 @@ describe("SettingsPage", () => {
         },
       });
       const user = userEvent.setup({ delay: null });
-      render(<SettingsPage />);
+      render(await SettingsPage());
 
       const input = screen.getByLabelText(/email/i);
       await user.clear(input);
@@ -146,47 +162,57 @@ describe("SettingsPage", () => {
   });
 
   describe("Sign-in Methods section", () => {
-    it("renders the Google sign-in method row", () => {
-      render(<SettingsPage />);
+    it("renders the Google sign-in method row", async () => {
+      render(await SettingsPage());
       expect(screen.getByText("Google")).toBeInTheDocument();
     });
 
-    it("shows Connected badge when Google is linked", () => {
-      render(<SettingsPage />);
+    it("shows Connected badge when Google is linked", async () => {
+      render(await SettingsPage());
       expect(screen.getByText("Connected")).toBeInTheDocument();
     });
 
-    it("shows Not connected badge when Google is not linked", () => {
-      getMockUseAuth().mockReturnValue({ user: exampleUser.user.email });
-      render(<SettingsPage />);
+    it("shows Not connected badge when Google is not linked", async () => {
+      // TODO: FIX THIS STUFF WITH getMockUseAuth, change to getMockGetUser
+      setMockUser({
+        user: {
+          email: "user@example.com",
+          identities: [{ provider: "email" }],
+        },
+      });
+      render(await SettingsPage());
       expect(screen.getByText("Not connected")).toBeInTheDocument();
     });
 
-    it("shows Unlink button when Google is connected", () => {
-      render(<SettingsPage />);
+    it("shows Unlink button when Google is connected", async () => {
+      render(await SettingsPage());
       expect(screen.getByTestId("google-unlink-btn")).toBeInTheDocument();
     });
 
-    it("shows Link button when Google is not connected", () => {
-      getMockUseAuth().mockReturnValue({
-        user: exampleUser.user,
-        userIdentities: [],
+    it("shows Link button when Google is not connected", async () => {
+      setMockUser({
+        user: {
+          email: "user@example.com",
+          identities: [{ provider: "email" }],
+        },
       });
-      render(<SettingsPage />);
+      render(await SettingsPage());
       expect(screen.getByTestId("google-link-btn")).toBeInTheDocument();
     });
 
     describe("Link Google dialog", () => {
       beforeEach(() => {
-        getMockUseAuth().mockReturnValue({
-          user: exampleUser.user,
-          userIdentities: [],
+        setMockUser({
+          user: {
+            email: "user@example.com",
+            identities: [{ provider: "email" }],
+          },
         });
       });
 
       it("opens the Link Google dialog when the Link button is clicked", async () => {
         const user = userEvent.setup({ delay: null });
-        render(<SettingsPage />);
+        render(await SettingsPage());
 
         await user.click(screen.getByTestId("google-link-btn"));
 
@@ -203,7 +229,7 @@ describe("SettingsPage", () => {
           error: null,
         });
         const user = userEvent.setup({ delay: null });
-        render(<SettingsPage />);
+        render(await SettingsPage());
 
         await user.click(screen.getByTestId("google-link-btn"));
         await user.click(screen.getByRole("button", { name: /continue/i }));
@@ -221,7 +247,7 @@ describe("SettingsPage", () => {
           error: { message: identityFoundError },
         });
         const user = userEvent.setup({ delay: null });
-        render(<SettingsPage />);
+        render(await SettingsPage());
 
         await user.click(screen.getByTestId("google-link-btn"));
         await user.click(screen.getByRole("button", { name: /continue/i }));
@@ -235,7 +261,7 @@ describe("SettingsPage", () => {
     describe("Unlink Google dialog", () => {
       it("opens the Unlink Google dialog when the Unlink button is clicked", async () => {
         const user = userEvent.setup({ delay: null });
-        render(<SettingsPage />);
+        render(await SettingsPage());
 
         await user.click(screen.getByTestId("google-unlink-btn"));
 
@@ -244,42 +270,30 @@ describe("SettingsPage", () => {
         ).toBeInTheDocument();
       });
 
-      // TODO: Fix when possible
-      // it("calls getUserIdentities and unlinkIdentity on Continue", async () => {
-      //   const googleIdentity = { provider: "google", id: "gid-1" };
-      //   (mockSupabase.auth.getUserIdentities as jest.Mock).mockResolvedValue({
-      //     data: { identities: [googleIdentity] },
-      //     error: null,
-      //   });
-      //   (mockSupabase.auth.unlinkIdentity as jest.Mock).mockResolvedValue({
-      //     error: null,
-      //   });
+      it("calls getUserIdentities and unlinkIdentity on Continue", async () => {
+        const googleIdentity = { provider: "google", id: "gid-1" };
 
-      //   // Prevent actual page reload in jsdom
-      //   /*
-      //    * This test will fail due to this issue where window.location methods cannot be mocked
-      //    * https://github.com/jestjs/jest/issues/5124
-      //    */
+        (mockSupabase.auth.getUserIdentities as jest.Mock).mockResolvedValue({
+          data: { identities: [googleIdentity] },
+          error: null,
+        });
+        (mockSupabase.auth.unlinkIdentity as jest.Mock).mockResolvedValue({
+          error: null,
+        });
 
-      //   const reloadSpy = jest
-      //     .spyOn(window.location, "reload")
-      //     .mockImplementation(() => {});
+        const user = userEvent.setup({ delay: null });
+        render(await SettingsPage());
 
-      //   const user = userEvent.setup({ delay: null });
-      //   render(<SettingsPage />);
+        await user.click(screen.getByTestId("google-unlink-btn"));
+        await user.click(screen.getByRole("button", { name: /continue/i }));
 
-      //   await user.click(screen.getByTestId("google-unlink-btn"));
-      //   await user.click(screen.getByRole("button", { name: /continue/i }));
-
-      //   await waitFor(() => {
-      //     expect(mockSupabase.auth.getUserIdentities).toHaveBeenCalled();
-      //     expect(mockSupabase.auth.unlinkIdentity).toHaveBeenCalledWith(
-      //       googleIdentity,
-      //     );
-      //   });
-
-      //   reloadSpy.mockRestore();
-      // });
+        await waitFor(() => {
+          expect(mockSupabase.auth.getUserIdentities).toHaveBeenCalled();
+          expect(mockSupabase.auth.unlinkIdentity).toHaveBeenCalledWith(
+            googleIdentity,
+          );
+        });
+      });
 
       it("shows an error when no Google identity is found during unlink", async () => {
         (mockSupabase.auth.getUserIdentities as jest.Mock).mockResolvedValue({
@@ -287,7 +301,7 @@ describe("SettingsPage", () => {
           error: null,
         });
         const user = userEvent.setup({ delay: null });
-        render(<SettingsPage />);
+        render(await SettingsPage());
 
         await user.click(screen.getByTestId("google-unlink-btn"));
         await user.click(screen.getByRole("button", { name: /continue/i }));
@@ -310,7 +324,7 @@ describe("SettingsPage", () => {
         });
 
         const user = userEvent.setup({ delay: null });
-        render(<SettingsPage />);
+        render(await SettingsPage());
 
         await user.click(screen.getByTestId("google-unlink-btn"));
         await user.click(screen.getByRole("button", { name: /continue/i }));
@@ -326,7 +340,7 @@ describe("SettingsPage", () => {
           error: { message: identityFetchFailed },
         });
         const user = userEvent.setup({ delay: null });
-        render(<SettingsPage />);
+        render(await SettingsPage());
 
         await user.click(screen.getByTestId("google-unlink-btn"));
         await user.click(screen.getByRole("button", { name: /continue/i }));
@@ -345,7 +359,7 @@ describe("SettingsPage", () => {
 
     it("renders both session sign-out buttons", async () => {
       const user = userEvent.setup({ delay: null });
-      render(<SettingsPage />);
+      render(await SettingsPage());
       await openSecurityTab(user);
 
       expect(
@@ -359,7 +373,7 @@ describe("SettingsPage", () => {
     describe("Sign out of other sessions", () => {
       it("opens the confirmation dialog when the button is clicked", async () => {
         const user = userEvent.setup({ delay: null });
-        render(<SettingsPage />);
+        render(await SettingsPage());
         await openSecurityTab(user);
 
         await user.click(
@@ -376,7 +390,7 @@ describe("SettingsPage", () => {
           error: null,
         });
         const user = userEvent.setup({ delay: null });
-        render(<SettingsPage />);
+        render(await SettingsPage());
         await openSecurityTab(user);
 
         await user.click(
@@ -399,7 +413,7 @@ describe("SettingsPage", () => {
           error: { message: "Network error" },
         });
         const user = userEvent.setup({ delay: null });
-        render(<SettingsPage />);
+        render(await SettingsPage());
         await openSecurityTab(user);
 
         await user.click(
@@ -416,7 +430,7 @@ describe("SettingsPage", () => {
     describe("Sign out of all sessions", () => {
       it("opens the confirmation dialog when the button is clicked", async () => {
         const user = userEvent.setup({ delay: null });
-        render(<SettingsPage />);
+        render(await SettingsPage());
         await openSecurityTab(user);
 
         await user.click(
@@ -435,7 +449,7 @@ describe("SettingsPage", () => {
           error: null,
         });
         const user = userEvent.setup({ delay: null });
-        render(<SettingsPage />);
+        render(await SettingsPage());
         await openSecurityTab(user);
 
         await user.click(
@@ -456,7 +470,7 @@ describe("SettingsPage", () => {
           error: { message: signOutFailed },
         });
         const user = userEvent.setup({ delay: null });
-        render(<SettingsPage />);
+        render(await SettingsPage());
         await openSecurityTab(user);
 
         await user.click(
