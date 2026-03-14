@@ -36,7 +36,7 @@ export default function Header() {
       </Link>
       {user && !loading && (
         <div className="flex items-center gap-3">
-          <span className="text-sm text-gray-500">{user?.email}</span>
+          <span className="text-sm text-gray-500">{user.email}</span>
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
@@ -47,7 +47,7 @@ export default function Header() {
                       alt="shadcn"
                     />
                     <AvatarFallback>
-                      {user?.email?.charAt(0).toUpperCase()}
+                      {user.email?.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                 </Button>
