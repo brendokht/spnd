@@ -1,7 +1,7 @@
 {
+  "extends": "@spnd/typescript-config/base.json",
   "compilerOptions": {
     "target": "ES2022",
-    "module": "CommonJS",
     "strict": true,
     "esModuleInterop": true
   },
