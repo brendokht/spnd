@@ -186,6 +186,7 @@ export default function RegisterForm() {
                   <InputOTP
                     {...field}
                     id={field.name}
+                    data-testid="otp-input"
                     aria-invalid={fieldState.invalid}
                     value={field.value}
                     onChange={(e) => {

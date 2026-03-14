@@ -71,7 +71,7 @@ export async function verifyOtp(
   redirect("/");
 }
 
-export async function googleOAuthLogin() {
+export async function googleOAuthLogin(): Promise<AuthFormState> | never {
   const supabase = await createClient();
 
   const { data, error } = await supabase.auth.signInWithOAuth({
