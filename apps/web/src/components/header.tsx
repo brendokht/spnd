@@ -30,8 +30,12 @@ export async function Header() {
         Spnd
       </Link>
       <div className="flex items-center gap-3">
-        {user?.email && <span className="text-sm">{user.email}</span>}
-        <UserMenu user={user} />
+        {user && (
+          <>
+            <span className="text-sm">{user.email}</span>
+            <UserMenu user={user} />
+          </>
+        )}
       </div>
     </header>
   );
