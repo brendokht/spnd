@@ -5,6 +5,10 @@ import { resolve } from "path";
 config({ path: resolve(__dirname, ".env") });
 
 export const STORAGE_STATE = resolve(__dirname, "tests/.auth/user.json");
+export const OAUTH_USER_STORAGE_STATE = resolve(
+  __dirname,
+  "tests/.auth/oauth-user.json",
+);
 
 const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
 

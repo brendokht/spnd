@@ -1,4 +1,6 @@
 import { expect, test } from "@playwright/test";
+import { oauthUser } from "@spnd/constants/tests";
+import { OAUTH_USER_STORAGE_STATE } from "../playwright.config";
 
 // Uses authenticated storageState from playwright.config.ts (via "chromium" project)
 
@@ -42,7 +44,7 @@ test.describe("Settings page (authenticated)", () => {
   }) => {
     await page.goto("/settings");
     await page.waitForLoadState("networkidle");
-    await page.getByLabel(/email/i).fill("new@example.com");
+    await page.getByLabel(/email/i).fill(oauthUser.email);
     await page.getByRole("button", { name: /submit/i }).click();
     await expect(
       page.getByText(
@@ -111,6 +113,8 @@ test.describe("Settings page (authenticated)", () => {
     // have a Google identity in their real session. We intercept GET /auth/v1/user
     // before navigating so the auth context sees a Google identity, causing
     // hasGoogle=true and rendering the "Unlink" button instead of "Link".
+    test.use({ storageState: OAUTH_USER_STORAGE_STATE });
+
     const MOCK_GOOGLE_IDENTITY_ID = "mock-google-identity-id";
 
     const mockUserWithGoogle = {

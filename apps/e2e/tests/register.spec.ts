@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { exampleUser } from "@spnd/constants/tests";
 
 test.use({ storageState: { cookies: [], origins: [] } }); // unauthenticated
 
@@ -10,7 +11,7 @@ test.describe("Register page", () => {
     await expect(page.getByText("Create an account")).toBeVisible();
     await expect(page.getByLabel(/email/i)).toBeVisible();
     await expect(
-      page.getByRole("button", { name: /continue with email/i }),
+      page.getByRole("button", { name: /send magic link/i }),
     ).toBeVisible();
     await expect(
       page.getByRole("button", { name: /continue with google/i }),
@@ -20,9 +21,9 @@ test.describe("Register page", () => {
 
   test("submitting email reveals OTP input section", async ({ page }) => {
     await page.goto("/register");
-    await page.getByLabel(/email/i).fill("register@example.com");
-    await page.getByRole("button", { name: /continue with email/i }).click();
-    await expect(page.getByPlaceholder(/6-digit code/i)).toBeVisible();
+    await page.getByLabel(/email/i).fill(exampleUser.user.email);
+    await page.getByRole("button", { name: /send magic link/i }).click();
+    await expect(page.getByTestId("otp-input")).toBeVisible();
     await expect(page.getByRole("button", { name: /verify/i })).toBeVisible();
   });
 });
