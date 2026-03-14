@@ -152,7 +152,6 @@ function ChangeEmail({ email }: { email: string }) {
   const [emailError, setEmailError] = useState<string | null>(null);
 
   const changeEmail = async () => {
-    console.log("changeEmail 1", emailSuccess);
     setEmailError(null);
     setEmailSuccess(false);
     setEmailLoading(true);
