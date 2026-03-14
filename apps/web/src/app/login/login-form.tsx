@@ -3,7 +3,7 @@
 import {
   AuthFormState,
   googleOAuthLogin,
-  magicLinkLogin,
+  sendMagicLink,
   verifyOtp,
 } from "@/app/actions/auth";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -46,7 +46,7 @@ export default function LoginForm() {
         };
       }
 
-      const response = await magicLinkLogin(state, payload);
+      const response = await sendMagicLink(state, payload);
 
       return response;
     },
@@ -156,7 +156,7 @@ export default function LoginForm() {
             form="magic-link"
             disabled={magicLinkPending || !magicLinkForm.formState.isValid}
           >
-            Submit
+            Send Magic Link
             {magicLinkPending && <Spinner />}
           </Button>
         </form>
@@ -190,7 +190,6 @@ export default function LoginForm() {
                     value={field.value}
                     onChange={(e) => {
                       field.onChange(e);
-                      console.log(e);
                       otpForm.setValue("otp", e);
                     }}
                     autoComplete="one-time-code"
@@ -226,7 +225,7 @@ export default function LoginForm() {
                 form="otp"
                 disabled={verifyOtpPending || !otpForm.formState.isValid}
               >
-                Submit
+                Verify
                 {verifyOtpPending && <Spinner />}
               </Button>
               <Button

@@ -15,7 +15,7 @@ export type AuthFormState = {
   errors: Array<string>;
 };
 
-export async function magicLinkLogin(
+export async function sendMagicLink(
   prev: AuthFormState | undefined,
   formData: FormData,
 ): Promise<AuthFormState> {
