@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/context/auth";
+import { appUrl } from "@/lib/config";
 import { supabase } from "@/lib/supabase";
 import { Alert, AlertDescription } from "@spnd/ui/components/ui/alert";
 import {
@@ -192,7 +193,7 @@ function ChangeEmail() {
       {
         email: newEmail,
       },
-      { emailRedirectTo: "http://localhost:3000/settings" },
+      { emailRedirectTo: `${appUrl}/settings` },
     );
     if (error) {
       setEmailError(error.message);
@@ -375,12 +376,14 @@ function UnlinkGoogleOAuth() {
 }
 
 export default function SettingsPage() {
-  const { userIdentities } = useAuth();
+  const { userIdentities, loading } = useAuth();
 
   const hasGoogle = userIdentities?.includes("google") ?? false;
   // Account security state
   const [othersSuccess, setOthersSuccess] = useState(false);
   const [securityError, setSecurityError] = useState<string | null>(null);
+
+  if (loading) return null;
 
   return (
     <>
