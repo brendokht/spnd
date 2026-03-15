@@ -1,8 +1,16 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  ChangeEmailSchema,
+  ChangeEmailSchemaType,
+} from "@spnd/shared-types/auth";
 import { GoogleIcon } from "@spnd/ui/components/company-icons/google";
-import { Alert, AlertDescription } from "@spnd/ui/components/ui/alert";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@spnd/ui/components/ui/alert";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,7 +37,6 @@ import {
   FieldError,
   FieldGroup,
   FieldLabel,
-  FieldSet,
 } from "@spnd/ui/components/ui/field";
 import { Input } from "@spnd/ui/components/ui/input";
 import {
@@ -47,36 +54,33 @@ import {
   TabsList,
   TabsTrigger,
 } from "@spnd/ui/components/ui/tabs";
-import { User } from "@supabase/supabase-js";
-import { AlertCircle, CheckCircle2, Info, Mail, SquarePen } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { CheckCircle, Info, Mail, SquarePen } from "lucide-react";
+import { startTransition, useActionState, useRef, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
+import {
+  changeEmail,
+  linkGoogleOAuth,
+  signOut,
+  unlinkGoogleOAuth,
+} from "../actions/auth";
 
-// Google icon as an inline SVG component
-const supabase = createClient();
+function SignOutGlobalDialog() {
+  const [open, setOpen] = useState<boolean>(false);
 
-function SignOutGlobalDialog({
-  setSecurityError,
-}: {
-  setSecurityError: React.Dispatch<React.SetStateAction<string | null>>;
-}) {
-  const router = useRouter();
-  const [loading, setLoading] = useState(false);
+  const [signOutState, signOutAction, signOutPending] = useActionState(
+    () => signOut({ scope: "global" }),
+    { success: false, message: "", errors: [] },
+  );
 
-  const signOutEverywhere = async () => {
-    setSecurityError(null);
-    setLoading(true);
-    const { error } = await supabase.auth.signOut({ scope: "global" });
-    if (error) {
-      setSecurityError(error.message);
-      setLoading(false);
-    } else {
-      router.push("/login");
-    }
+  const handleClick = async () => {
+    startTransition(() => {
+      signOutAction();
+    });
+    setOpen(false);
   };
 
   return (
-    <AlertDialog>
+    <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger
         render={<Button variant="destructive">Sign out of all sessions</Button>}
       />
@@ -87,10 +91,16 @@ function SignOutGlobalDialog({
             This will sign you out of all sessions, including your current one.
           </AlertDialogDescription>
         </AlertDialogHeader>
+        {signOutState.errors &&
+          signOutState.errors.map((error) => (
+            <p className="text-destructive text-end text-sm" key={error}>
+              {error}
+            </p>
+          ))}
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction disabled={loading} onClick={signOutEverywhere}>
-            {loading && <Spinner />}
+          <AlertDialogAction disabled={signOutPending} onClick={handleClick}>
+            {signOutPending && <Spinner />}
             Continue
           </AlertDialogAction>
         </AlertDialogFooter>
@@ -99,24 +109,18 @@ function SignOutGlobalDialog({
   );
 }
 
-function SignOutOthersDialog({
-  setSecurityError,
-  setOthersSuccess,
-}: {
-  setSecurityError: React.Dispatch<React.SetStateAction<string | null>>;
-  setOthersSuccess: React.Dispatch<React.SetStateAction<boolean>>;
-}) {
-  const [loading, setLoading] = useState(false);
-  const [open, setOpen] = useState(false);
+function SignOutOthersDialog() {
+  const [open, setOpen] = useState<boolean>(false);
 
-  const signOutOthers = async () => {
-    setSecurityError(null);
-    setOthersSuccess(false);
-    setLoading(true);
-    const { error } = await supabase.auth.signOut({ scope: "others" });
-    if (error) setSecurityError(error.message);
-    else setOthersSuccess(true);
-    setLoading(false);
+  const [signOutState, signOutAction, signOutPending] = useActionState(
+    () => signOut({ scope: "others" }),
+    { success: false, message: "", errors: [] },
+  );
+
+  const handleClick = async () => {
+    startTransition(() => {
+      signOutAction();
+    });
     setOpen(false);
   };
 
@@ -133,10 +137,16 @@ function SignOutOthersDialog({
             current one.
           </AlertDialogDescription>
         </AlertDialogHeader>
+        {signOutState.errors &&
+          signOutState.errors.map((error) => (
+            <p className="text-destructive text-end text-sm" key={error}>
+              {error}
+            </p>
+          ))}
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction disabled={loading} onClick={signOutOthers}>
-            {loading && <Spinner />}
+          <AlertDialogAction disabled={signOutPending} onClick={handleClick}>
+            {signOutPending && <Spinner />}
             Continue
           </AlertDialogAction>
         </AlertDialogFooter>
@@ -145,101 +155,104 @@ function SignOutOthersDialog({
   );
 }
 
-function ChangeEmail({ email }: { email: string }) {
-  const [newEmail, setNewEmail] = useState(email ?? "");
-  const [emailLoading, setEmailLoading] = useState(false);
-  const [emailSuccess, setEmailSuccess] = useState(false);
-  const [emailError, setEmailError] = useState<string | null>(null);
+function ChangeEmailForm({ email }: { email: string }) {
+  const [changeEmailState, changeEmailAction, changeEmailPending] =
+    useActionState(changeEmail, { success: false, message: "", errors: [] });
 
-  const changeEmail = async () => {
-    setEmailError(null);
-    setEmailSuccess(false);
-    setEmailLoading(true);
-    const { error } = await supabase.auth.updateUser(
-      {
-        email: newEmail,
-      },
-      { emailRedirectTo: "http://localhost:3000/settings" },
+  const changeEmailForm = useForm<ChangeEmailSchemaType>({
+    resolver: zodResolver(ChangeEmailSchema),
+    defaultValues: {
+      email: email,
+    },
+    mode: "all",
+  });
+
+  const changeEmailFormRef = useRef<HTMLFormElement>(null);
+
+  function changeEmailOnSubmit() {
+    startTransition(() =>
+      changeEmailAction(new FormData(changeEmailFormRef.current!)),
     );
-    if (error) {
-      setEmailError(error.message);
-      setEmailSuccess(false);
-      return;
-    } else setEmailSuccess(true);
-    setEmailLoading(false);
-  };
+  }
 
   return (
     <>
-      {emailSuccess && (
+      {changeEmailState.success && changeEmailState.message && (
         <CardContent>
           <Alert>
-            <CheckCircle2 className="h-4 w-4" />
-            <AlertDescription>
-              Emails have been sent to the old and new email address.
-            </AlertDescription>
+            <CheckCircle />
+            <AlertTitle>Success</AlertTitle>
+            <AlertDescription>{changeEmailState.message}</AlertDescription>
           </Alert>
         </CardContent>
       )}
       <CardFooter>
-        <div className="flex w-full items-end justify-between">
-          <FieldSet className="w-full max-w-xs">
-            <FieldGroup>
-              <Field>
-                <FieldLabel htmlFor="email">
-                  <Mail size={16} />
-                  Email
-                </FieldLabel>
-                <Input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  onChange={(e) => setNewEmail(e.target.value)}
-                  value={newEmail}
-                  placeholder="example@spnd.com"
-                />
-                <FieldError>{emailError}</FieldError>
-              </Field>
-            </FieldGroup>
-          </FieldSet>
+        <form
+          id="change-email"
+          ref={changeEmailFormRef}
+          action={changeEmailAction}
+          onSubmit={(e) => changeEmailForm.handleSubmit(changeEmailOnSubmit)(e)}
+          className="flex w-full items-end justify-between"
+        >
+          <FieldGroup className="w-full max-w-xs">
+            <Controller
+              name="email"
+              control={changeEmailForm.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor={field.name}>
+                    <Mail size={16} />
+                    Email
+                  </FieldLabel>
+                  <Input
+                    {...field}
+                    id={field.name}
+                    aria-invalid={fieldState.invalid}
+                    placeholder="new@example.com"
+                    autoComplete="email"
+                  />
+                  {fieldState.invalid && (
+                    <FieldError errors={[fieldState.error]} />
+                  )}
+                  {changeEmailState.errors &&
+                    changeEmailState.errors.map((error) => (
+                      <FieldError key={error}>{error}</FieldError>
+                    ))}
+                </Field>
+              )}
+            />
+          </FieldGroup>
           <Button
-            disabled={emailLoading || newEmail === email || emailSuccess}
-            onClick={changeEmail}
+            type="submit"
+            form="change-email"
+            disabled={
+              changeEmailPending ||
+              !changeEmailForm.formState.isValid ||
+              !changeEmailForm.formState.isDirty ||
+              changeEmailState.success
+            }
           >
-            {emailLoading && <Spinner />}
             Submit
+            {changeEmailPending && <Spinner />}
           </Button>
-        </div>
+        </form>
       </CardFooter>
     </>
   );
 }
 
-function LinkGoogleOAuth({ hasGoogle }: { hasGoogle: boolean }) {
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+function LinkGoogleOAuth() {
   const [open, setOpen] = useState<boolean>(false);
 
-  const linkGoogle = async () => {
-    if (hasGoogle) {
-      setError("Google identity found, no need to link");
-      setLoading(false);
-      return;
-    }
+  const [linkGoogleState, likeGoogleAction, linkGooglePending] = useActionState(
+    linkGoogleOAuth,
+    { success: false, message: "", errors: [] },
+  );
 
-    const { error: linkError } = await supabase.auth.linkIdentity({
-      provider: "google",
-      options: {
-        redirectTo: "http://localhost:3000/settings",
-      },
+  const handleClick = async () => {
+    startTransition(() => {
+      likeGoogleAction();
     });
-
-    if (linkError) {
-      setError(linkError.message);
-      setLoading(false);
-      return;
-    }
-    await supabase.auth.refreshSession();
     setOpen(false);
   };
 
@@ -259,10 +272,16 @@ function LinkGoogleOAuth({ hasGoogle }: { hasGoogle: boolean }) {
             This will link your chosen Google account with your Spnd Account.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <p className="text-destructive text-sm">{error}</p>
+        {linkGoogleState.errors &&
+          linkGoogleState.errors.map((error) => (
+            <p className="text-destructive text-end text-sm" key={error}>
+              {error}
+            </p>
+          ))}
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction disabled={loading} onClick={linkGoogle}>
+          <AlertDialogAction disabled={linkGooglePending} onClick={handleClick}>
+            {linkGooglePending && <Spinner />}
             Continue
           </AlertDialogAction>
         </AlertDialogFooter>
@@ -272,45 +291,20 @@ function LinkGoogleOAuth({ hasGoogle }: { hasGoogle: boolean }) {
 }
 
 function UnlinkGoogleOAuth() {
-  const router = useRouter();
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState<boolean>(false);
 
-  const unlinkGoogle = async () => {
-    const { data, error: getIdentitiesError } =
-      await supabase.auth.getUserIdentities();
+  const [unlinkGoogleState, unlikeGoogleAction, unlinkGooglePending] =
+    useActionState(unlinkGoogleOAuth, {
+      success: false,
+      message: "",
+      errors: [],
+    });
 
-    if (getIdentitiesError) {
-      setError(getIdentitiesError.message);
-      setLoading(false);
-      return;
-    }
-
-    const googleIdentity = data!.identities.find(
-      (identity) => identity.provider === "google",
-    );
-
-    if (!googleIdentity) {
-      setError("No Google identity found");
-      setLoading(false);
-      return;
-    }
-
-    const { error: unlinkError } =
-      await supabase.auth.unlinkIdentity(googleIdentity);
-
-    if (unlinkError) {
-      if (unlinkError.code === "single_identity_not_deletable")
-        setError(
-          "You must change the email associated with this account to unlink your Google account.",
-        );
-      else setError(unlinkError.message);
-      setLoading(false);
-      return;
-    }
+  const handleClick = async () => {
+    startTransition(() => {
+      unlikeGoogleAction();
+    });
     setOpen(false);
-    router.refresh();
   };
 
   return (
@@ -330,10 +324,19 @@ function UnlinkGoogleOAuth() {
             must have Magic Link enabled to do this.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <p className="text-destructive text-sm">{error}</p>
+        {unlinkGoogleState.errors &&
+          unlinkGoogleState.errors.map((error) => (
+            <p className="text-destructive text-end text-sm" key={error}>
+              {error}
+            </p>
+          ))}
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction disabled={loading} onClick={unlinkGoogle}>
+          <AlertDialogAction
+            disabled={unlinkGooglePending}
+            onClick={handleClick}
+          >
+            {unlinkGooglePending && <Spinner />}
             Continue
           </AlertDialogAction>
         </AlertDialogFooter>
@@ -342,15 +345,13 @@ function UnlinkGoogleOAuth() {
   );
 }
 
-export default function Settings({ user }: { user: User }) {
-  const userIdentities =
-    user.identities?.map((identity) => identity.provider) ?? [];
-
-  const hasGoogle = userIdentities.includes("google") ?? false;
-  // Account security state
-  const [othersSuccess, setOthersSuccess] = useState(false);
-  const [securityError, setSecurityError] = useState<string | null>(null);
-
+export default function Settings({
+  email,
+  hasGoogleIdentity,
+}: {
+  email: string;
+  hasGoogleIdentity: boolean;
+}) {
   return (
     <>
       <h1 className="text-xl font-bold">Settings</h1>
@@ -367,7 +368,7 @@ export default function Settings({ user }: { user: User }) {
                 Change the email associated to your account.
               </CardDescription>
             </CardHeader>
-            <ChangeEmail email={user.email!} />
+            <ChangeEmailForm email={email} />
           </Card>
           <Card>
             <CardHeader>
@@ -388,15 +389,15 @@ export default function Settings({ user }: { user: User }) {
                   </ItemDescription>
                 </ItemContent>
                 <ItemContent>
-                  <Badge variant={hasGoogle ? "default" : "outline"}>
-                    {hasGoogle ? "Connected" : "Not connected"}
+                  <Badge variant={hasGoogleIdentity ? "default" : "outline"}>
+                    {hasGoogleIdentity ? "Connected" : "Not connected"}
                   </Badge>
                 </ItemContent>
                 <ItemActions>
-                  {hasGoogle ? (
+                  {hasGoogleIdentity ? (
                     <UnlinkGoogleOAuth />
                   ) : (
-                    <LinkGoogleOAuth hasGoogle={hasGoogle} />
+                    <LinkGoogleOAuth />
                   )}
                 </ItemActions>
               </Item>
@@ -419,31 +420,9 @@ export default function Settings({ user }: { user: User }) {
               <CardTitle>Account Security</CardTitle>
               <CardDescription>Manage your active sessions.</CardDescription>
             </CardHeader>
-            {securityError ||
-              (othersSuccess && (
-                <CardContent>
-                  {securityError && (
-                    <Alert variant="destructive">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>{securityError}</AlertDescription>
-                    </Alert>
-                  )}
-                  {othersSuccess && (
-                    <Alert>
-                      <CheckCircle2 className="h-4 w-4" />
-                      <AlertDescription>
-                        All other sessions have been signed out.
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                </CardContent>
-              ))}
             <CardFooter className="space-x-4">
-              <SignOutOthersDialog
-                setOthersSuccess={setOthersSuccess}
-                setSecurityError={setSecurityError}
-              />
-              <SignOutGlobalDialog setSecurityError={setSecurityError} />
+              <SignOutOthersDialog />
+              <SignOutGlobalDialog />
             </CardFooter>
           </Card>
         </TabsContent>
