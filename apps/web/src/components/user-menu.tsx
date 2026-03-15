@@ -1,6 +1,6 @@
 "use client";
 
-import { createClient } from "@/lib/supabase/client";
+import { signOut } from "@/app/actions/auth";
 import {
   Avatar,
   AvatarFallback,
@@ -18,11 +18,8 @@ import {
 import { User } from "@supabase/supabase-js";
 import { Cog, LogOut } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
 export default function UserMenu({ user }: { user: User }) {
-  const supabase = createClient();
-  const router = useRouter();
   return (
     <>
       <DropdownMenu>
@@ -56,10 +53,7 @@ export default function UserMenu({ user }: { user: User }) {
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuItem
-              onClick={() => {
-                supabase.auth.signOut();
-                router.push("/login");
-              }}
+              onClick={() => signOut({ scope: "local" })}
               variant="destructive"
             >
               <LogOut />

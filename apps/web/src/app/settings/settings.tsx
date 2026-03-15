@@ -76,7 +76,7 @@ function SignOutGlobalDialog() {
     startTransition(() => {
       signOutAction();
     });
-    setOpen(false);
+    if (signOutState.success) setOpen(false);
   };
 
   return (
@@ -121,7 +121,7 @@ function SignOutOthersDialog() {
     startTransition(() => {
       signOutAction();
     });
-    setOpen(false);
+    if (signOutState.success) setOpen(false);
   };
 
   return (
@@ -253,7 +253,7 @@ function LinkGoogleOAuth() {
     startTransition(() => {
       likeGoogleAction();
     });
-    setOpen(false);
+    if (linkGoogleState.success) setOpen(false);
   };
 
   return (
@@ -304,7 +304,7 @@ function UnlinkGoogleOAuth() {
     startTransition(() => {
       unlikeGoogleAction();
     });
-    setOpen(false);
+    if (unlinkGoogleState.success) setOpen(false);
   };
 
   return (
