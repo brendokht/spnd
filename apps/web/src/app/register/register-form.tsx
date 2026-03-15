@@ -29,9 +29,16 @@ import {
 } from "@spnd/ui/components/ui/input-otp";
 import { Spinner } from "@spnd/ui/components/ui/spinner";
 import { REGEXP_ONLY_DIGITS } from "input-otp";
-import { startTransition, useActionState, useRef } from "react";
+import { useSearchParams } from "next/navigation";
+import { startTransition, useActionState, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 export default function RegisterForm() {
+  const searchParams = useSearchParams();
+
+  const [registrationError] = useState<string | null>(
+    searchParams.get("error_description"),
+  );
+
   const [magicLinkState, magicLinkAction, magicLinkPending] = useActionState(
     async (state: AuthFormState | undefined, payload: FormData | null) => {
       /*
@@ -146,6 +153,10 @@ export default function RegisterForm() {
                   {fieldState.invalid && (
                     <FieldError errors={[fieldState.error]} />
                   )}
+                  {magicLinkState.errors &&
+                    magicLinkState.errors.map((error) => (
+                      <FieldError key={error}>{error}</FieldError>
+                    ))}
                 </Field>
               )}
             />
@@ -239,6 +250,9 @@ export default function RegisterForm() {
             </Field>
           </FieldGroup>
         </form>
+      )}
+      {registrationError && (
+        <FieldError key={registrationError}>{registrationError}</FieldError>
       )}
       <div className="flex items-center gap-3">
         <span className="text-muted-foreground mx-auto text-xs">or</span>
