@@ -17,5 +17,15 @@ export default async function SettingsPage() {
     return "User not found";
   }
 
-  return <Settings user={user}></Settings>;
+  const userIdentities =
+    user.identities?.map((identity) => identity.provider) ?? [];
+
+  const hasGoogleIdentity = userIdentities.includes("google") ?? false;
+
+  return (
+    <Settings
+      email={user.email ?? ""}
+      hasGoogleIdentity={hasGoogleIdentity}
+    ></Settings>
+  );
 }
