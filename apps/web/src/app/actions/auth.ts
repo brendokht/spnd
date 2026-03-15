@@ -2,6 +2,15 @@
 
 import { appUrl } from "@/lib/config";
 import { createClient } from "@/lib/supabase/server";
+import { validateFormData } from "@/lib/validation-utils";
+import {
+  ChangeEmailSchema,
+  ChangeEmailSchemaType,
+  MagicLinkSchema,
+  type MagicLinkSchemaType,
+  OtpSchema,
+  type OtpSchemaType,
+} from "@spnd/shared-types/auth";
 import { SignOut } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -16,18 +25,23 @@ export type AuthFormState = {
   errors: Array<string>;
 };
 
-// TODO: Ensure form is valid on server as well (use Zod `parse`)
-
 export async function sendMagicLink(
   prev: AuthFormState | undefined,
   formData: FormData,
 ): Promise<AuthFormState> {
+  const validationResult = validateFormData<MagicLinkSchemaType>(
+    formData,
+    MagicLinkSchema,
+  );
+
+  if ("success" in validationResult) {
+    return validationResult;
+  }
+
   const supabase = await createClient();
 
-  const email = formData.get("email")?.toString();
-
   const { error } = await supabase.auth.signInWithOtp({
-    email: email!,
+    email: validationResult.email,
     options: { emailRedirectTo: `${appUrl}/auth/callback` },
   });
 
@@ -50,14 +64,17 @@ export async function verifyOtp(
   prev: AuthFormState | undefined,
   formData: FormData,
 ): Promise<AuthFormState> | never {
+  const validationResult = validateFormData<OtpSchemaType>(formData, OtpSchema);
+
+  if ("success" in validationResult) {
+    return validationResult;
+  }
+
   const supabase = await createClient();
 
-  const email = formData.get("email")?.toString();
-  const otp = formData.get("otp")?.toString();
-
   const { error } = await supabase.auth.verifyOtp({
-    email: email!,
-    token: otp!,
+    email: validationResult.email,
+    token: validationResult.otp,
     type: "email",
   });
 
@@ -122,12 +139,19 @@ export async function changeEmail(
   prev: AuthFormState,
   formData: FormData,
 ): Promise<AuthFormState> {
+  const validationResult = validateFormData<ChangeEmailSchemaType>(
+    formData,
+    ChangeEmailSchema,
+  );
+
+  if ("success" in validationResult) {
+    return validationResult;
+  }
+
   const supabase = await createClient();
 
-  const email = formData.get("email")?.toString();
-
   const { error } = await supabase.auth.updateUser(
-    { email: email },
+    { email: validationResult.email },
     { emailRedirectTo: "http://localhost:3000/settings" },
   );
 
