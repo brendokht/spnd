@@ -1,6 +1,7 @@
 import { googleOAuthLogin, sendMagicLink, verifyOtp } from "@/app/actions/auth";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useSearchParams } from "next/navigation";
 import RegisterPage from "./page";
 
 jest.mock("@/app/actions/auth", () => ({
@@ -9,14 +10,22 @@ jest.mock("@/app/actions/auth", () => ({
   googleOAuthLogin: jest.fn(),
 }));
 
+jest.mock("next/navigation", () => ({
+  useSearchParams: jest.fn(),
+}));
+
 document.elementFromPoint = (): null => null;
 
 const mockedSendMagicLink = jest.mocked(sendMagicLink);
 const mockedVerifyOtp = jest.mocked(verifyOtp);
 const mockedGoogleOAuthLogin = jest.mocked(googleOAuthLogin);
+const mockedGet = jest.fn();
 
 beforeEach(() => {
   jest.clearAllMocks();
+  (useSearchParams as jest.Mock).mockReturnValue({
+    get: mockedGet,
+  });
 });
 
 describe("RegisterPage", () => {
@@ -163,6 +172,14 @@ describe("RegisterPage", () => {
         /otp code must contain only digits/i,
       ),
     );
+  });
+
+  it("shows registration error when search params receives error_description", async () => {
+    mockedGet.mockReturnValue("Database error saving user");
+
+    render(<RegisterPage />);
+
+    await waitFor(() => screen.getByText("Database error saving user"));
   });
 
   it("disables verify button until 6 digits are entered", async () => {

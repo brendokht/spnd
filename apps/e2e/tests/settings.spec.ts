@@ -30,6 +30,7 @@ test.describe("Settings page (authenticated)", () => {
   }) => {
     await page.goto("/settings");
     await page.waitForLoadState("networkidle");
+
     await page.getByLabel(/email/i).fill("change@example.com");
     await page.getByRole("button", { name: /submit/i }).click();
     await expect(
@@ -44,6 +45,7 @@ test.describe("Settings page (authenticated)", () => {
   }) => {
     await page.goto("/settings");
     await page.waitForLoadState("networkidle");
+
     await page.getByLabel(/email/i).fill(oauthUser.email);
     await page.getByRole("button", { name: /submit/i }).click();
     await expect(
@@ -73,16 +75,19 @@ test.describe("Settings page (authenticated)", () => {
     }) => {
       await page.goto("/settings");
 
-      // Intercept the Supabase OAuth authorize redirect so the browser doesn't
-      // actually navigate away to Google. We capture the request so we can
-      // assert the correct provider was requested.
-      await page.route(
-        "**/auth/v1/user/identities/authorize**",
-        async (route) => {
-          // Fulfill with an empty 200 so the page stays in place
-          await route.fulfill({ status: 200, body: "" });
-        },
-      );
+      // Intercept the Server Action POST to /settings
+      await page.route("**/settings", async (route) => {
+        if (route.request().method() === "POST") {
+          await route.fulfill({
+            status: 303,
+            headers: {
+              location: "https://example.com/mock-oauth-url?provider=google",
+            },
+          });
+        } else {
+          await route.continue();
+        }
+      });
 
       // Open the link dialog and confirm
       await page.getByTestId("google-link-btn").click();
@@ -91,20 +96,19 @@ test.describe("Settings page (authenticated)", () => {
       ).toBeVisible();
 
       // Listener registered — not awaited yet, just queued
-      const oauthRequestPromise = page.waitForRequest((req) =>
-        req.url().includes("/auth/v1/user/identities/authorize"),
+      const responsePromise = page.waitForResponse(
+        (res) =>
+          res.url().includes("/settings") && res.request().method() === "POST",
       );
 
       await page.getByRole("button", { name: /continue/i }).click();
 
-      // Await the promise since it will be resolved at same time as page.route() now
-      const ouathRequestResponse = await oauthRequestPromise;
+      // Await the promise
+      const response = await responsePromise;
 
-      // Verify the request targeted the Google provider
-      expect(ouathRequestResponse.url()).not.toBeNull();
-      expect(
-        new URL(ouathRequestResponse.url())!.searchParams.get("provider"),
-      ).toBe("google");
+      // Verify the mocked server action responded with the redirect
+      expect(response.status()).toBe(303);
+      expect(response.headers()["location"]).toContain("provider=google");
     });
   });
 
@@ -181,14 +185,6 @@ test.describe("Settings page (authenticated)", () => {
     test("confirming unlink calls the identity delete endpoint", async ({
       page,
     }) => {
-      // Fulfill the DELETE request so the app doesn't error out
-      await page.route(
-        `**/auth/v1/user/identities/${MOCK_GOOGLE_IDENTITY_ID}`,
-        async (route) => {
-          await route.fulfill({ status: 200, body: JSON.stringify({}) });
-        },
-      );
-
       await page.goto("/settings");
       await page.waitForLoadState("networkidle");
 
@@ -197,22 +193,30 @@ test.describe("Settings page (authenticated)", () => {
         page.getByText(/would you like to unlink google?/i),
       ).toBeVisible();
 
+      // Intercept the Server Action POST to /settings
+      await page.route("**/settings", async (route) => {
+        if (route.request().method() === "POST") {
+          await route.fulfill({
+            status: 200,
+            headers: { location: "/settings" },
+          });
+        } else {
+          await route.continue();
+        }
+      });
+
       // Register listener before clicking so we don't miss the request.
-      // waitForRequest returns the Request object directly — no need for a
-      // separate captured variable, which would have a race against the
-      // async route handler that assigns it.
-      const unlinkRequestPromise = page.waitForRequest((req) =>
-        req
-          .url()
-          .includes(`/auth/v1/user/identities/${MOCK_GOOGLE_IDENTITY_ID}`),
+      const responsePromise = page.waitForResponse(
+        (res) =>
+          res.url().includes("/settings") && res.request().method() === "POST",
       );
 
       await page.getByRole("button", { name: /continue/i }).click();
-      const unlinkRequest = await unlinkRequestPromise;
+      const response = await responsePromise;
 
-      // Verify the correct identity was targeted with the right method
-      expect(unlinkRequest.url()).toContain(MOCK_GOOGLE_IDENTITY_ID);
-      expect(unlinkRequest.method()).toBe("DELETE");
+      // Verify the mocked server action responded with the correct status code
+      expect(response.status()).toBe(200);
+      expect(response.headers()["location"]).toBe("/settings");
     });
   });
 

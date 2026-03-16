@@ -1,11 +1,8 @@
-import { createClient } from "@/lib/supabase/client";
-import { createClient as createServerClient } from "@/lib/supabase/server";
 import {
+  changeEmailSuccess,
   duplicateEmailError,
   exampleUser,
-  identityFetchFailed,
-  identityFoundError,
-  identityNotFoundError,
+  identityLinkFailedError,
   newUser,
   signOutFailed,
   soleIdentityError,
@@ -14,148 +11,185 @@ import {
 import { User } from "@supabase/supabase-js";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { act } from "react";
+import {
+  changeEmail,
+  linkGoogleOAuth,
+  signOut,
+  unlinkGoogleOAuth,
+} from "../actions/auth";
 import SettingsPage from "./page";
 
 type RecursivePartial<T> = {
   [P in keyof T]?: RecursivePartial<T[P]>;
 };
 
-const mockPush = jest.fn();
-const mockRefresh = jest.fn();
+const mockGetUser = jest.fn();
 
 jest.mock("next/navigation", () => ({
-  useRouter: () => ({ push: mockPush, refresh: mockRefresh }),
+  redirect: jest.fn(),
 }));
 
-jest.mock("@/lib/supabase/server", () => {
-  const mockSupabaseClient = {
-    auth: {
-      getUser: jest.fn(),
-    },
-  };
-  return {
-    createClient: jest.fn(() => Promise.resolve(mockSupabaseClient)),
-  };
-});
+jest.mock("next/cache", () => ({
+  revalidatePath: jest.fn(),
+}));
 
-jest.mock("@/lib/supabase/client", () => {
-  const mockSupabaseClient = {
-    auth: {
-      updateUser: jest.fn(),
-      linkIdentity: jest.fn(),
-      unlinkIdentity: jest.fn(),
-      refreshSession: jest.fn(),
-      getUserIdentities: jest.fn(),
-      signOut: jest.fn(),
-    },
-  };
-  return {
-    createClient: jest.fn(() => mockSupabaseClient),
-  };
-});
+jest.mock("@/lib/supabase/server", () => ({
+  createClient: jest.fn(() => {
+    return {
+      auth: {
+        getUser: mockGetUser,
+      },
+    };
+  }),
+}));
 
-const mockSupabase = createClient();
+jest.mock("@/app/actions/auth", () => ({
+  changeEmail: jest.fn(),
+  linkGoogleOAuth: jest.fn(),
+  unlinkGoogleOAuth: jest.fn(),
+  signOut: jest.fn(),
+}));
 
-async function setMockUser({ user }: { user: RecursivePartial<User> }) {
-  const { auth } = await (createServerClient as jest.Mock)();
-  (auth.getUser as jest.Mock).mockResolvedValue({
-    data: {
-      user: user,
-    },
+const mockedChangeEmail = jest.mocked(changeEmail);
+const mockedLinkGoogleOAuth = jest.mocked(linkGoogleOAuth);
+const mockedUnlinkGoogleOAuth = jest.mocked(unlinkGoogleOAuth);
+const mockedSignOut = jest.mocked(signOut);
+
+function setMockUser({ user }: { user: RecursivePartial<User> }) {
+  mockGetUser.mockResolvedValue({
+    data: { user },
     error: null,
   });
 }
 
-beforeEach(async () => {
+beforeEach(() => {
   jest.clearAllMocks();
-  // Reset to default: Google linked
-  setMockUser(exampleUser);
+  setMockUser({
+    user: {
+      email: exampleUser.user.email,
+      identities: [{ provider: "email" }, { provider: "google" }],
+    },
+  });
 });
 
 describe("SettingsPage", () => {
   it("renders the Settings heading", async () => {
-    render(await SettingsPage());
+    await act(async () => {
+      return render(await SettingsPage());
+    });
     expect(
       screen.getByRole("heading", { name: /settings/i }),
     ).toBeInTheDocument();
   });
 
   it("renders Account and Security tabs", async () => {
-    render(await SettingsPage());
-
+    await act(async () => {
+      return render(await SettingsPage());
+    });
     expect(screen.getByRole("tab", { name: /account/i })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /security/i })).toBeInTheDocument();
   });
 
   describe("Change Email section", () => {
     it("renders the Change Email card heading", async () => {
-      render(await SettingsPage());
+      await act(async () => {
+        return render(await SettingsPage());
+      });
       expect(screen.getByText(/change email/i)).toBeInTheDocument();
     });
 
     it("renders the email input pre-filled with the user's current email", async () => {
-      render(await SettingsPage());
+      await act(async () => {
+        return render(await SettingsPage());
+      });
       const input = screen.getByLabelText(/email/i);
       expect(input).toBeInTheDocument();
-      expect(input).toHaveValue("user@example.com");
+      expect(input).toHaveValue(exampleUser.user.email);
     });
 
     it("disables the Submit button when the email is unchanged", async () => {
-      render(await SettingsPage());
+      await act(async () => {
+        return render(await SettingsPage());
+      });
       expect(screen.getByRole("button", { name: /^submit$/i })).toBeDisabled();
     });
 
     it("enables the Submit button when the email is changed", async () => {
+      await act(async () => {
+        return render(await SettingsPage());
+      });
       const user = userEvent.setup({ delay: null });
-      render(await SettingsPage());
 
       const input = screen.getByLabelText(/email/i);
+
       await user.clear(input);
       await user.type(input, newUser.email);
 
-      expect(screen.getByRole("button", { name: /^submit$/i })).toBeEnabled();
+      expect(screen.getByRole("button", { name: /submit/i })).toBeEnabled();
     });
 
-    it("calls updateUser with the new email on Submit and shows success", async () => {
-      (mockSupabase.auth.updateUser as jest.Mock).mockResolvedValue({
-        error: null,
+    it("calls changeEmail with the new email on Submit and shows success", async () => {
+      mockedChangeEmail.mockResolvedValue({
+        success: true,
+        message: changeEmailSuccess,
+        errors: [],
       });
+
+      await act(async () => {
+        return render(await SettingsPage());
+      });
+
       const user = userEvent.setup({ delay: null });
-      render(await SettingsPage());
 
       const input = screen.getByLabelText(/email/i);
+
       await user.clear(input);
       await user.type(input, newUser.email);
       await user.click(screen.getByRole("button", { name: /^submit$/i }));
 
       await waitFor(() => {
-        expect(mockSupabase.auth.updateUser).toHaveBeenCalledWith(
-          { email: newUser.email },
-          { emailRedirectTo: "http://localhost:3000/settings" },
+        expect(mockedChangeEmail).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.any(FormData),
         );
+
+        const formData = mockedChangeEmail.mock.calls[0]![1] as FormData;
+        expect(formData.get("email")).toBe(newUser.email);
+        expect(screen.getByText(changeEmailSuccess)).toBeInTheDocument();
         expect(
-          screen.getByText(
-            /emails have been sent to the old and new email address/i,
-          ),
-        ).toBeInTheDocument();
+          screen.getByRole("button", { name: /^submit$/i }),
+        ).toBeDisabled();
       });
     });
 
-    it("shows an error message when updateUser fails", async () => {
-      (mockSupabase.auth.updateUser as jest.Mock).mockResolvedValue({
-        error: {
-          message: duplicateEmailError,
-        },
+    it("shows an error message when changeEmail fails", async () => {
+      mockedChangeEmail.mockResolvedValue({
+        success: false,
+        message: "",
+        errors: [duplicateEmailError],
       });
+
+      await act(async () => {
+        return render(await SettingsPage());
+      });
+
       const user = userEvent.setup({ delay: null });
-      render(await SettingsPage());
 
       const input = screen.getByLabelText(/email/i);
+
       await user.clear(input);
       await user.type(input, takenUser.email);
       await user.click(screen.getByRole("button", { name: /^submit$/i }));
 
       await waitFor(() => {
+        expect(mockedChangeEmail).toHaveBeenCalledWith(
+          expect.anything(),
+          expect.any(FormData),
+        );
+
+        const formData = mockedChangeEmail.mock.calls[0]![1] as FormData;
+        expect(formData.get("email")).toBe(takenUser.email);
         expect(screen.getByText(duplicateEmailError)).toBeInTheDocument();
       });
     });
@@ -163,40 +197,49 @@ describe("SettingsPage", () => {
 
   describe("Sign-in Methods section", () => {
     it("renders the Google sign-in method row", async () => {
-      render(await SettingsPage());
+      await act(async () => {
+        return render(await SettingsPage());
+      });
       expect(screen.getByText("Google")).toBeInTheDocument();
     });
 
     it("shows Connected badge when Google is linked", async () => {
-      render(await SettingsPage());
+      await act(async () => {
+        return render(await SettingsPage());
+      });
       expect(screen.getByText("Connected")).toBeInTheDocument();
     });
 
     it("shows Not connected badge when Google is not linked", async () => {
-      // TODO: FIX THIS STUFF WITH getMockUseAuth, change to getMockGetUser
       setMockUser({
         user: {
-          email: "user@example.com",
+          email: exampleUser.user.email,
           identities: [{ provider: "email" }],
         },
       });
-      render(await SettingsPage());
+      await act(async () => {
+        return render(await SettingsPage());
+      });
       expect(screen.getByText("Not connected")).toBeInTheDocument();
     });
 
     it("shows Unlink button when Google is connected", async () => {
-      render(await SettingsPage());
+      await act(async () => {
+        return render(await SettingsPage());
+      });
       expect(screen.getByTestId("google-unlink-btn")).toBeInTheDocument();
     });
 
     it("shows Link button when Google is not connected", async () => {
       setMockUser({
         user: {
-          email: "user@example.com",
+          email: exampleUser.user.email,
           identities: [{ provider: "email" }],
         },
       });
-      render(await SettingsPage());
+      await act(async () => {
+        return render(await SettingsPage());
+      });
       expect(screen.getByTestId("google-link-btn")).toBeInTheDocument();
     });
 
@@ -204,15 +247,18 @@ describe("SettingsPage", () => {
       beforeEach(() => {
         setMockUser({
           user: {
-            email: "user@example.com",
+            email: exampleUser.user.email,
             identities: [{ provider: "email" }],
           },
         });
       });
 
       it("opens the Link Google dialog when the Link button is clicked", async () => {
+        await act(async () => {
+          return render(await SettingsPage());
+        });
+
         const user = userEvent.setup({ delay: null });
-        render(await SettingsPage());
 
         await user.click(screen.getByTestId("google-link-btn"));
 
@@ -221,47 +267,55 @@ describe("SettingsPage", () => {
         ).toBeInTheDocument();
       });
 
-      it("calls linkIdentity on continue and closes the dialog", async () => {
-        (mockSupabase.auth.linkIdentity as jest.Mock).mockResolvedValue({
-          error: null,
+      it("calls linkGoogleOAuth on continue and closes the dialog", async () => {
+        mockedLinkGoogleOAuth.mockResolvedValue({
+          success: true,
+          message: "",
+          errors: [],
         });
-        (mockSupabase.auth.refreshSession as jest.Mock).mockResolvedValue({
-          error: null,
-        });
+
         const user = userEvent.setup({ delay: null });
-        render(await SettingsPage());
+        await act(async () => {
+          return render(await SettingsPage());
+        });
 
         await user.click(screen.getByTestId("google-link-btn"));
         await user.click(screen.getByRole("button", { name: /continue/i }));
 
         await waitFor(() => {
-          expect(mockSupabase.auth.linkIdentity).toHaveBeenCalledWith({
-            provider: "google",
-            options: { redirectTo: "http://localhost:3000/settings" },
-          });
+          expect(mockedLinkGoogleOAuth).toHaveBeenCalled();
         });
       });
 
-      it("shows an error in the dialog when linkIdentity fails", async () => {
-        (mockSupabase.auth.linkIdentity as jest.Mock).mockResolvedValue({
-          error: { message: identityFoundError },
+      it("shows an error in the dialog when linkGoogleOAuth fails", async () => {
+        mockedLinkGoogleOAuth.mockResolvedValue({
+          success: false,
+          message: "",
+          errors: [identityLinkFailedError],
         });
+
         const user = userEvent.setup({ delay: null });
-        render(await SettingsPage());
+        await act(async () => {
+          return render(await SettingsPage());
+        });
 
         await user.click(screen.getByTestId("google-link-btn"));
         await user.click(screen.getByRole("button", { name: /continue/i }));
 
         await waitFor(() => {
-          expect(screen.getByText(identityFoundError)).toBeInTheDocument();
+          expect(mockedLinkGoogleOAuth).toHaveBeenCalled();
+          expect(screen.getByText(identityLinkFailedError)).toBeInTheDocument();
         });
       });
     });
 
     describe("Unlink Google dialog", () => {
-      it("opens the Unlink Google dialog when the Unlink button is clicked", async () => {
+      it("opens the Unlink Google dialog when the Link button is clicked", async () => {
+        await act(async () => {
+          return render(await SettingsPage());
+        });
+
         const user = userEvent.setup({ delay: null });
-        render(await SettingsPage());
 
         await user.click(screen.getByTestId("google-unlink-btn"));
 
@@ -270,83 +324,44 @@ describe("SettingsPage", () => {
         ).toBeInTheDocument();
       });
 
-      it("calls getUserIdentities and unlinkIdentity on Continue", async () => {
-        const googleIdentity = { provider: "google", id: "gid-1" };
-
-        (mockSupabase.auth.getUserIdentities as jest.Mock).mockResolvedValue({
-          data: { identities: [googleIdentity] },
-          error: null,
-        });
-        (mockSupabase.auth.unlinkIdentity as jest.Mock).mockResolvedValue({
-          error: null,
+      it("calls unlinkGoogleOAuth on continue and closes the dialog", async () => {
+        mockedUnlinkGoogleOAuth.mockResolvedValue({
+          success: true,
+          message: "",
+          errors: [],
         });
 
         const user = userEvent.setup({ delay: null });
-        render(await SettingsPage());
+        await act(async () => {
+          return render(await SettingsPage());
+        });
 
         await user.click(screen.getByTestId("google-unlink-btn"));
         await user.click(screen.getByRole("button", { name: /continue/i }));
 
         await waitFor(() => {
-          expect(mockSupabase.auth.getUserIdentities).toHaveBeenCalled();
-          expect(mockSupabase.auth.unlinkIdentity).toHaveBeenCalledWith(
-            googleIdentity,
-          );
+          expect(mockedUnlinkGoogleOAuth).toHaveBeenCalled();
         });
       });
 
-      it("shows an error when no Google identity is found during unlink", async () => {
-        (mockSupabase.auth.getUserIdentities as jest.Mock).mockResolvedValue({
-          data: { identities: [] },
-          error: null,
+      it("shows an error in the dialog when unlinkGoogleOAuth fails", async () => {
+        mockedUnlinkGoogleOAuth.mockResolvedValue({
+          success: false,
+          message: "",
+          errors: [soleIdentityError],
         });
+
         const user = userEvent.setup({ delay: null });
-        render(await SettingsPage());
+        await act(async () => {
+          return render(await SettingsPage());
+        });
 
         await user.click(screen.getByTestId("google-unlink-btn"));
         await user.click(screen.getByRole("button", { name: /continue/i }));
 
         await waitFor(() => {
-          expect(screen.getByText(identityNotFoundError)).toBeInTheDocument();
-        });
-      });
-
-      it("shows a friendly error for single_identity_not_deletable", async () => {
-        const googleIdentity = { provider: "google", id: "gid-1" };
-        (mockSupabase.auth.getUserIdentities as jest.Mock).mockResolvedValue({
-          data: { identities: [googleIdentity] },
-          error: null,
-        });
-        (mockSupabase.auth.unlinkIdentity as jest.Mock).mockResolvedValue({
-          error: {
-            code: "single_identity_not_deletable",
-          },
-        });
-
-        const user = userEvent.setup({ delay: null });
-        render(await SettingsPage());
-
-        await user.click(screen.getByTestId("google-unlink-btn"));
-        await user.click(screen.getByRole("button", { name: /continue/i }));
-
-        await waitFor(() => {
+          expect(mockedUnlinkGoogleOAuth).toHaveBeenCalled();
           expect(screen.getByText(soleIdentityError)).toBeInTheDocument();
-        });
-      });
-
-      it("shows a generic error when getUserIdentities fails", async () => {
-        (mockSupabase.auth.getUserIdentities as jest.Mock).mockResolvedValue({
-          data: null,
-          error: { message: identityFetchFailed },
-        });
-        const user = userEvent.setup({ delay: null });
-        render(await SettingsPage());
-
-        await user.click(screen.getByTestId("google-unlink-btn"));
-        await user.click(screen.getByRole("button", { name: /continue/i }));
-
-        await waitFor(() => {
-          expect(screen.getByText(identityFetchFailed)).toBeInTheDocument();
         });
       });
     });
@@ -358,8 +373,12 @@ describe("SettingsPage", () => {
     }
 
     it("renders both session sign-out buttons", async () => {
+      await act(async () => {
+        return render(await SettingsPage());
+      });
+
       const user = userEvent.setup({ delay: null });
-      render(await SettingsPage());
+
       await openSecurityTab(user);
 
       expect(
@@ -372,8 +391,11 @@ describe("SettingsPage", () => {
 
     describe("Sign out of other sessions", () => {
       it("opens the confirmation dialog when the button is clicked", async () => {
+        await act(async () => {
+          return render(await SettingsPage());
+        });
+
         const user = userEvent.setup({ delay: null });
-        render(await SettingsPage());
         await openSecurityTab(user);
 
         await user.click(
@@ -385,54 +407,61 @@ describe("SettingsPage", () => {
         ).toBeInTheDocument();
       });
 
-      it("calls signOut with scope 'others' and shows success message", async () => {
-        (mockSupabase.auth.signOut as jest.Mock).mockResolvedValue({
-          error: null,
+      it("calls signOut with scope 'others'", async () => {
+        mockedSignOut.mockResolvedValue({
+          success: true,
+          message: "",
+          errors: [],
         });
-        const user = userEvent.setup({ delay: null });
-        render(await SettingsPage());
-        await openSecurityTab(user);
+        await act(async () => {
+          return render(await SettingsPage());
+        });
 
+        const user = userEvent.setup({ delay: null });
+
+        await openSecurityTab(user);
         await user.click(
           screen.getByRole("button", { name: /sign out of other sessions/i }),
         );
         await user.click(screen.getByRole("button", { name: /^continue$/i }));
 
         await waitFor(() => {
-          expect(mockSupabase.auth.signOut).toHaveBeenCalledWith({
-            scope: "others",
-          });
-          expect(
-            screen.getByText(/all other sessions have been signed out/i),
-          ).toBeInTheDocument();
+          expect(mockedSignOut).toHaveBeenCalledWith({ scope: "others" });
         });
       });
 
       it("shows an error message when signing out others fails", async () => {
-        (mockSupabase.auth.signOut as jest.Mock).mockResolvedValue({
-          error: { message: "Network error" },
+        mockedSignOut.mockResolvedValue({
+          success: false,
+          message: "",
+          errors: [signOutFailed],
         });
-        const user = userEvent.setup({ delay: null });
-        render(await SettingsPage());
-        await openSecurityTab(user);
 
+        await act(async () => {
+          return render(await SettingsPage());
+        });
+
+        const user = userEvent.setup({ delay: null });
+        await openSecurityTab(user);
         await user.click(
           screen.getByRole("button", { name: /sign out of other sessions/i }),
         );
         await user.click(screen.getByRole("button", { name: /^continue$/i }));
 
         await waitFor(() => {
-          expect(screen.getByText("Network error")).toBeInTheDocument();
+          expect(screen.getByText(signOutFailed)).toBeInTheDocument();
         });
       });
     });
 
     describe("Sign out of all sessions", () => {
       it("opens the confirmation dialog when the button is clicked", async () => {
-        const user = userEvent.setup({ delay: null });
-        render(await SettingsPage());
-        await openSecurityTab(user);
+        await act(async () => {
+          return render(await SettingsPage());
+        });
 
+        const user = userEvent.setup({ delay: null });
+        await openSecurityTab(user);
         await user.click(
           screen.getByRole("button", { name: /sign out of all sessions/i }),
         );
@@ -444,35 +473,41 @@ describe("SettingsPage", () => {
         ).toBeInTheDocument();
       });
 
-      it("calls signOut with scope 'global' and redirects to /login", async () => {
-        (mockSupabase.auth.signOut as jest.Mock).mockResolvedValue({
-          error: null,
+      it("calls signOut with scope 'global'", async () => {
+        mockedSignOut.mockResolvedValue({
+          success: true,
+          message: "",
+          errors: [],
         });
-        const user = userEvent.setup({ delay: null });
-        render(await SettingsPage());
-        await openSecurityTab(user);
+        await act(async () => {
+          return render(await SettingsPage());
+        });
 
+        const user = userEvent.setup({ delay: null });
+        await openSecurityTab(user);
         await user.click(
           screen.getByRole("button", { name: /sign out of all sessions/i }),
         );
         await user.click(screen.getByRole("button", { name: /^continue$/i }));
 
         await waitFor(() => {
-          expect(mockSupabase.auth.signOut).toHaveBeenCalledWith({
-            scope: "global",
-          });
-          expect(mockPush).toHaveBeenCalledWith("/login");
+          expect(mockedSignOut).toHaveBeenCalledWith({ scope: "global" });
         });
       });
 
       it("shows an error message when signing out everywhere fails", async () => {
-        (mockSupabase.auth.signOut as jest.Mock).mockResolvedValue({
-          error: { message: signOutFailed },
+        mockedSignOut.mockResolvedValue({
+          success: false,
+          message: "",
+          errors: [signOutFailed],
         });
-        const user = userEvent.setup({ delay: null });
-        render(await SettingsPage());
-        await openSecurityTab(user);
 
+        await act(async () => {
+          return render(await SettingsPage());
+        });
+
+        const user = userEvent.setup({ delay: null });
+        await openSecurityTab(user);
         await user.click(
           screen.getByRole("button", { name: /sign out of all sessions/i }),
         );
