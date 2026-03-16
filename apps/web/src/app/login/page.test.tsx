@@ -1,7 +1,14 @@
 import { googleOAuthLogin, sendMagicLink, verifyOtp } from "@/app/actions/auth";
+import {
+  exampleUser,
+  invalidOtpError,
+  newUser,
+  unableToSignInError,
+} from "@spnd/constants/tests";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useSearchParams } from "next/navigation";
+import { act } from "react";
 import LoginPage from "./page";
 
 jest.mock("@/app/actions/auth", () => ({
@@ -26,237 +33,291 @@ beforeEach(() => {
   (useSearchParams as jest.Mock).mockReturnValue({
     get: mockedGet,
   });
+
+  mockedGet.mockReturnValue("");
 });
 
-describe("LoginPage", () => {
-  it("renders email input, send magic link button, google button, and register link", () => {
-    render(<LoginPage />);
-    expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /send magic link/i }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /continue with google/i }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /register/i })).toBeInTheDocument();
-  });
-
-  it("shows OTP section after sending magic link successfully", async () => {
-    mockedSendMagicLink.mockResolvedValue({
-      success: true,
-      message: "Check your email for the magic link.",
-      errors: [],
-    });
-    const user = userEvent.setup({ delay: null });
-    render(<LoginPage />);
-
-    await user.type(screen.getByLabelText(/email/i), "test@example.com");
-    await user.click(screen.getByRole("button", { name: /send magic link/i }));
-
-    await waitFor(() => {
-      expect(screen.getByTestId("otp-input")).toBeInTheDocument();
+describe("Login Page", () => {
+  describe("Initial Rendering", () => {
+    it("renders login form and external links", async () => {
+      await act(async () => {
+        return render(LoginPage());
+      });
+      expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
       expect(
-        screen.getByRole("button", { name: /verify/i }),
+        screen.getByRole("button", { name: /send magic link/i }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: /continue with google/i }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("link", { name: /register/i }),
       ).toBeInTheDocument();
     });
-  });
 
-  it("disables send button when email is empty", () => {
-    render(<LoginPage />);
-    expect(
-      screen.getByRole("button", { name: /send magic link/i }),
-    ).toBeDisabled();
-  });
+    it("shows error alert when search params receives error_description", async () => {
+      mockedGet.mockReturnValue(unableToSignInError);
 
-  it("shows validation error when email is not valid", async () => {
-    const user = userEvent.setup({ delay: null });
-    render(<LoginPage />);
+      await act(async () => {
+        return render(LoginPage());
+      });
 
-    await user.type(screen.getByLabelText(/email/i), "new@example");
-
-    expect(screen.getByText(/invalid email address/i)).toBeInTheDocument();
-  });
-
-  it("filters non-digits from OTP input", async () => {
-    mockedSendMagicLink.mockResolvedValue({
-      success: true,
-      message: "Check your email for the magic link.",
-      errors: [],
-    });
-    const user = userEvent.setup({ delay: null });
-    render(<LoginPage />);
-
-    await user.type(screen.getByLabelText(/email/i), "test@example.com");
-    await user.click(screen.getByRole("button", { name: /send magic link/i }));
-
-    await waitFor(() => screen.getByTestId("otp-input"));
-    await user.type(screen.getByTestId("otp-input"), "ab12cd34ef56");
-
-    expect(screen.getByTestId("otp-input")).toHaveValue("123456");
-  });
-
-  it("calls verifyOtp action on OTP form submission", async () => {
-    mockedSendMagicLink.mockResolvedValue({
-      success: true,
-      message: "Check your email for the magic link.",
-      errors: [],
-    });
-    mockedVerifyOtp.mockResolvedValue({
-      success: true,
-      message: "",
-      errors: [],
-    });
-    const user = userEvent.setup({ delay: null });
-    render(<LoginPage />);
-
-    await user.type(screen.getByLabelText(/email/i), "test@example.com");
-    await user.click(screen.getByRole("button", { name: /send magic link/i }));
-
-    await waitFor(() => screen.getByTestId("otp-input"));
-    await user.type(screen.getByTestId("otp-input"), "123456");
-    await user.click(screen.getByRole("button", { name: /verify/i }));
-
-    await waitFor(() => {
-      expect(verifyOtp).toHaveBeenCalled();
+      await waitFor(() => screen.getByText(unableToSignInError));
     });
   });
 
-  it("shows error alert when OTP verification fails", async () => {
-    mockedSendMagicLink.mockResolvedValue({
-      success: true,
-      message: "Check your email for the magic link.",
-      errors: [],
+  describe("Magic Link Submission", () => {
+    it("disables send button when email is empty", async () => {
+      await act(async () => {
+        return render(LoginPage());
+      });
+      expect(
+        screen.getByRole("button", { name: /send magic link/i }),
+      ).toBeDisabled();
     });
-    mockedVerifyOtp.mockResolvedValue({
-      success: false,
-      message: "",
-      errors: ["Invalid OTP"],
+
+    it("shows validation error when email is not valid", async () => {
+      const user = userEvent.setup({ delay: null });
+      await act(async () => {
+        return render(LoginPage());
+      });
+
+      await user.type(screen.getByLabelText(/email/i), "new@example");
+
+      expect(screen.getByText(/invalid email address/i)).toBeInTheDocument();
     });
-    const user = userEvent.setup({ delay: null });
-    render(<LoginPage />);
 
-    await user.type(screen.getByLabelText(/email/i), "test@example.com");
-    await user.click(screen.getByRole("button", { name: /send magic link/i }));
+    it("triggers sendMagicLink action on Enter key in email field", async () => {
+      mockedSendMagicLink.mockResolvedValue({
+        success: true,
+        message: "Check your email for the magic link.",
+        errors: [],
+      });
+      const user = userEvent.setup({ delay: null });
+      await act(async () => {
+        return render(LoginPage());
+      });
 
-    await waitFor(() => screen.getByTestId("otp-input"));
-    await user.type(screen.getByTestId("otp-input"), "123456");
-    await user.click(screen.getByRole("button", { name: /verify/i }));
+      await user.type(screen.getByLabelText(/email/i), exampleUser.user.email);
+      await user.keyboard("{Enter}");
 
-    await waitFor(() => {
-      expect(screen.getByText("Invalid OTP")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(sendMagicLink).toHaveBeenCalled();
+      });
     });
-  });
 
-  it("shows validation error when otp is not 6 digits", async () => {
-    mockedSendMagicLink.mockResolvedValue({
-      success: true,
-      message: "Check your email for the magic link.",
-      errors: [],
-    });
-    const user = userEvent.setup({ delay: null });
-    render(<LoginPage />);
+    it("reveals OTP input section after successful magic link request", async () => {
+      mockedSendMagicLink.mockResolvedValue({
+        success: true,
+        message: "Check your email for the magic link.",
+        errors: [],
+      });
+      const user = userEvent.setup({ delay: null });
+      await act(async () => {
+        return render(LoginPage());
+      });
 
-    await user.type(screen.getByLabelText(/email/i), "new@example.com");
-    await user.click(screen.getByRole("button", { name: /send magic link/i }));
+      await user.type(screen.getByLabelText(/email/i), exampleUser.user.email);
+      await user.click(
+        screen.getByRole("button", { name: /send magic link/i }),
+      );
 
-    await waitFor(() => screen.getByTestId("otp-input"));
-    await user.type(screen.getByTestId("otp-input"), "12345");
-
-    await user.tab();
-
-    await waitFor(() =>
-      expect(screen.getByRole("alert")).toHaveTextContent(
-        /otp code must contain only digits/i,
-      ),
-    );
-  });
-
-  it("shows login error when search params receives error_description", async () => {
-    mockedGet.mockReturnValue("Unable to sign user in");
-
-    render(<LoginPage />);
-
-    await waitFor(() => screen.getByText("Unable to sign user in"));
-  });
-
-  it("disables verify button until 6 digits are entered", async () => {
-    mockedSendMagicLink.mockResolvedValue({
-      success: true,
-      message: "Check your email for the magic link.",
-      errors: [],
-    });
-    const user = userEvent.setup({ delay: null });
-    render(<LoginPage />);
-
-    await user.type(screen.getByLabelText(/email/i), "test@example.com");
-    await user.click(screen.getByRole("button", { name: /send magic link/i }));
-
-    await waitFor(() => screen.getByTestId("otp-input"));
-    await user.type(screen.getByTestId("otp-input"), "12345");
-    expect(screen.getByRole("button", { name: /verify/i })).toBeDisabled();
-
-    await user.type(screen.getByTestId("otp-input"), "6");
-    expect(screen.getByRole("button", { name: /verify/i })).not.toBeDisabled();
-  });
-
-  it("triggers googleOAuthLogin on button click", async () => {
-    mockedGoogleOAuthLogin.mockResolvedValue({
-      success: true,
-      message: "",
-      errors: [],
-    });
-    const user = userEvent.setup({ delay: null });
-    render(<LoginPage />);
-
-    await user.click(
-      screen.getByRole("button", { name: /continue with google/i }),
-    );
-
-    await waitFor(() => {
-      expect(googleOAuthLogin).toHaveBeenCalled();
+      await waitFor(() => {
+        expect(screen.getByTestId("otp-input")).toBeInTheDocument();
+        expect(
+          screen.getByRole("button", { name: /verify/i }),
+        ).toBeInTheDocument();
+      });
     });
   });
 
-  it("triggers sendMagicLink action on Enter key in email field", async () => {
-    mockedSendMagicLink.mockResolvedValue({
-      success: true,
-      message: "Check your email for the magic link.",
-      errors: [],
+  describe("OTP Verification", () => {
+    it("filters non-digit characters from OTP input", async () => {
+      mockedSendMagicLink.mockResolvedValue({
+        success: true,
+        message: "Check your email for the magic link.",
+        errors: [],
+      });
+      const user = userEvent.setup({ delay: null });
+      await act(async () => {
+        return render(LoginPage());
+      });
+
+      await user.type(screen.getByLabelText(/email/i), exampleUser.user.email);
+      await user.click(
+        screen.getByRole("button", { name: /send magic link/i }),
+      );
+
+      await waitFor(() => screen.getByTestId("otp-input"));
+      await user.type(screen.getByTestId("otp-input"), "ab12cd34ef56");
+
+      expect(screen.getByTestId("otp-input")).toHaveValue("123456");
     });
-    const user = userEvent.setup({ delay: null });
-    render(<LoginPage />);
 
-    await user.type(screen.getByLabelText(/email/i), "test@example.com");
-    await user.keyboard("{Enter}");
+    it("disables verify button until 6 digits are entered", async () => {
+      mockedSendMagicLink.mockResolvedValue({
+        success: true,
+        message: "Check your email for the magic link.",
+        errors: [],
+      });
+      const user = userEvent.setup({ delay: null });
+      await act(async () => {
+        return render(LoginPage());
+      });
 
-    await waitFor(() => {
-      expect(sendMagicLink).toHaveBeenCalled();
+      await user.type(screen.getByLabelText(/email/i), exampleUser.user.email);
+      await user.click(
+        screen.getByRole("button", { name: /send magic link/i }),
+      );
+
+      await waitFor(() => screen.getByTestId("otp-input"));
+      await user.type(screen.getByTestId("otp-input"), "12345");
+      expect(screen.getByRole("button", { name: /verify/i })).toBeDisabled();
+
+      await user.type(screen.getByTestId("otp-input"), "6");
+      expect(
+        screen.getByRole("button", { name: /verify/i }),
+      ).not.toBeDisabled();
+    });
+
+    it("shows validation error when otp code is not 6 digits", async () => {
+      mockedSendMagicLink.mockResolvedValue({
+        success: true,
+        message: "Check your email for the magic link.",
+        errors: [],
+      });
+      const user = userEvent.setup({ delay: null });
+      await act(async () => {
+        return render(LoginPage());
+      });
+
+      await user.type(screen.getByLabelText(/email/i), newUser.user.email);
+      await user.click(
+        screen.getByRole("button", { name: /send magic link/i }),
+      );
+
+      await waitFor(() => screen.getByTestId("otp-input"));
+      await user.type(screen.getByTestId("otp-input"), "12345");
+
+      await user.tab();
+
+      await waitFor(() =>
+        expect(screen.getByRole("alert")).toHaveTextContent(
+          /otp code must contain only digits/i,
+        ),
+      );
+    });
+
+    it("triggers verifyOtp action on Enter key in OTP field with 6 digits", async () => {
+      mockedSendMagicLink.mockResolvedValue({
+        success: true,
+        message: "Check your email for the magic link.",
+        errors: [],
+      });
+      mockedVerifyOtp.mockResolvedValue({
+        success: true,
+        message: "",
+        errors: [],
+      });
+      const user = userEvent.setup({ delay: null });
+      await act(async () => {
+        return render(LoginPage());
+      });
+
+      await user.type(screen.getByLabelText(/email/i), exampleUser.user.email);
+      await user.click(
+        screen.getByRole("button", { name: /send magic link/i }),
+      );
+
+      await waitFor(() => screen.getByTestId("otp-input"));
+      await user.type(screen.getByTestId("otp-input"), "123456");
+      await user.keyboard("{Enter}");
+
+      await waitFor(() => {
+        expect(verifyOtp).toHaveBeenCalled();
+      });
+    });
+
+    it("calls verifyOtp action on OTP form submission", async () => {
+      mockedSendMagicLink.mockResolvedValue({
+        success: true,
+        message: "Check your email for the magic link.",
+        errors: [],
+      });
+      mockedVerifyOtp.mockResolvedValue({
+        success: true,
+        message: "",
+        errors: [],
+      });
+      const user = userEvent.setup({ delay: null });
+      await act(async () => {
+        return render(LoginPage());
+      });
+
+      await user.type(screen.getByLabelText(/email/i), exampleUser.user.email);
+      await user.click(
+        screen.getByRole("button", { name: /send magic link/i }),
+      );
+
+      await waitFor(() => screen.getByTestId("otp-input"));
+      await user.type(screen.getByTestId("otp-input"), "123456");
+      await user.click(screen.getByRole("button", { name: /verify/i }));
+
+      await waitFor(() => {
+        expect(verifyOtp).toHaveBeenCalled();
+      });
+    });
+
+    it("shows error alert when OTP verification fails", async () => {
+      mockedSendMagicLink.mockResolvedValue({
+        success: true,
+        message: "Check your email for the magic link.",
+        errors: [],
+      });
+      mockedVerifyOtp.mockResolvedValue({
+        success: false,
+        message: "",
+        errors: [invalidOtpError],
+      });
+      const user = userEvent.setup({ delay: null });
+      await act(async () => {
+        return render(LoginPage());
+      });
+
+      await user.type(screen.getByLabelText(/email/i), exampleUser.user.email);
+      await user.click(
+        screen.getByRole("button", { name: /send magic link/i }),
+      );
+
+      await waitFor(() => screen.getByTestId("otp-input"));
+      await user.type(screen.getByTestId("otp-input"), "123456");
+      await user.click(screen.getByRole("button", { name: /verify/i }));
+
+      await waitFor(() => {
+        expect(screen.getByText(invalidOtpError)).toBeInTheDocument();
+      });
     });
   });
 
-  it("triggers verifyOtp action on Enter key in OTP field when 6 digits entered", async () => {
-    mockedSendMagicLink.mockResolvedValue({
-      success: true,
-      message: "Check your email for the magic link.",
-      errors: [],
-    });
-    mockedVerifyOtp.mockResolvedValue({
-      success: true,
-      message: "",
-      errors: [],
-    });
-    const user = userEvent.setup({ delay: null });
-    render(<LoginPage />);
+  describe("Third-Party Authentication", () => {
+    it("triggers googleOAuthLogin action on button click", async () => {
+      mockedGoogleOAuthLogin.mockResolvedValue({
+        success: true,
+        message: "",
+        errors: [],
+      });
+      const user = userEvent.setup({ delay: null });
+      await act(async () => {
+        return render(LoginPage());
+      });
 
-    await user.type(screen.getByLabelText(/email/i), "test@example.com");
-    await user.click(screen.getByRole("button", { name: /send magic link/i }));
+      await user.click(
+        screen.getByRole("button", { name: /continue with google/i }),
+      );
 
-    await waitFor(() => screen.getByTestId("otp-input"));
-    await user.type(screen.getByTestId("otp-input"), "123456");
-    await user.keyboard("{Enter}");
-
-    await waitFor(() => {
-      expect(verifyOtp).toHaveBeenCalled();
+      await waitFor(() => {
+        expect(googleOAuthLogin).toHaveBeenCalled();
+      });
     });
   });
 });

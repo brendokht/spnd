@@ -35,15 +35,8 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-describe("GET /auth/callback", () => {
-  it("redirects to /login when no code param is present", async () => {
-    const req = makeRequest(`${appUrl}/auth/callback`);
-    const res = await GET(req);
-    expect(res.status).toBe(307);
-    expect(res.headers.get("location")).toBe(`${appUrl}/login`);
-  });
-
-  it("redirects to / on successful code exchange", async () => {
+describe("Auth Callback Route", () => {
+  it("redirects to home page on successful code exchange", async () => {
     mockExchangeCodeForSession.mockResolvedValue({ error: null });
     const req = makeRequest(`${appUrl}/auth/callback?code=abc123`);
     const res = await GET(req);
@@ -52,15 +45,24 @@ describe("GET /auth/callback", () => {
     expect(res.headers.get("location")).toBe(`${appUrl}/`);
   });
 
-  it("redirects to /login?error=... when code exchange fails", async () => {
-    mockExchangeCodeForSession.mockResolvedValue({
-      error: { message: "Invalid code" },
+  describe("Error Handling", () => {
+    it("redirects to login page when no code parameter is present", async () => {
+      const req = makeRequest(`${appUrl}/auth/callback`);
+      const res = await GET(req);
+      expect(res.status).toBe(307);
+      expect(res.headers.get("location")).toBe(`${appUrl}/login`);
     });
-    const req = makeRequest(`${appUrl}/auth/callback?code=badcode`);
-    const res = await GET(req);
-    expect(res.status).toBe(307);
-    const location = res.headers.get("location") ?? "";
-    expect(location).toContain("/login?error=");
-    expect(decodeURIComponent(location)).toContain("Invalid code");
+
+    it("redirects to login page with error when code exchange fails", async () => {
+      mockExchangeCodeForSession.mockResolvedValue({
+        error: { message: "Invalid code" },
+      });
+      const req = makeRequest(`${appUrl}/auth/callback?code=badcode`);
+      const res = await GET(req);
+      expect(res.status).toBe(307);
+      const location = res.headers.get("location") ?? "";
+      expect(location).toContain("/login?error=");
+      expect(decodeURIComponent(location)).toContain("Invalid code");
+    });
   });
 });

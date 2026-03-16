@@ -73,8 +73,8 @@ beforeEach(() => {
   });
 });
 
-describe("SettingsPage", () => {
-  it("renders the Settings heading", async () => {
+describe("Settings Page", () => {
+  it("renders settings page heading", async () => {
     await act(async () => {
       return render(await SettingsPage());
     });
@@ -83,7 +83,7 @@ describe("SettingsPage", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders Account and Security tabs", async () => {
+  it("renders account and security tabs", async () => {
     await act(async () => {
       return render(await SettingsPage());
     });
@@ -92,14 +92,14 @@ describe("SettingsPage", () => {
   });
 
   describe("Change Email section", () => {
-    it("renders the Change Email card heading", async () => {
+    it("renders change email card heading", async () => {
       await act(async () => {
         return render(await SettingsPage());
       });
       expect(screen.getByText(/change email/i)).toBeInTheDocument();
     });
 
-    it("renders the email input pre-filled with the user's current email", async () => {
+    it("renders email input pre-filled with current user email", async () => {
       await act(async () => {
         return render(await SettingsPage());
       });
@@ -108,14 +108,14 @@ describe("SettingsPage", () => {
       expect(input).toHaveValue(exampleUser.user.email);
     });
 
-    it("disables the Submit button when the email is unchanged", async () => {
+    it("disables submit button when email is unchanged", async () => {
       await act(async () => {
         return render(await SettingsPage());
       });
       expect(screen.getByRole("button", { name: /^submit$/i })).toBeDisabled();
     });
 
-    it("enables the Submit button when the email is changed", async () => {
+    it("enables submit button when email is changed", async () => {
       await act(async () => {
         return render(await SettingsPage());
       });
@@ -124,12 +124,12 @@ describe("SettingsPage", () => {
       const input = screen.getByLabelText(/email/i);
 
       await user.clear(input);
-      await user.type(input, newUser.email);
+      await user.type(input, newUser.user.email);
 
       expect(screen.getByRole("button", { name: /submit/i })).toBeEnabled();
     });
 
-    it("calls changeEmail with the new email on Submit and shows success", async () => {
+    it("calls changeEmail action on form submission and shows success", async () => {
       mockedChangeEmail.mockResolvedValue({
         success: true,
         message: changeEmailSuccess,
@@ -145,7 +145,7 @@ describe("SettingsPage", () => {
       const input = screen.getByLabelText(/email/i);
 
       await user.clear(input);
-      await user.type(input, newUser.email);
+      await user.type(input, newUser.user.email);
       await user.click(screen.getByRole("button", { name: /^submit$/i }));
 
       await waitFor(() => {
@@ -155,7 +155,7 @@ describe("SettingsPage", () => {
         );
 
         const formData = mockedChangeEmail.mock.calls[0]![1] as FormData;
-        expect(formData.get("email")).toBe(newUser.email);
+        expect(formData.get("email")).toBe(newUser.user.email);
         expect(screen.getByText(changeEmailSuccess)).toBeInTheDocument();
         expect(
           screen.getByRole("button", { name: /^submit$/i }),
@@ -163,7 +163,7 @@ describe("SettingsPage", () => {
       });
     });
 
-    it("shows an error message when changeEmail fails", async () => {
+    it("shows error message when changeEmail action fails", async () => {
       mockedChangeEmail.mockResolvedValue({
         success: false,
         message: "",
@@ -196,21 +196,21 @@ describe("SettingsPage", () => {
   });
 
   describe("Sign-in Methods section", () => {
-    it("renders the Google sign-in method row", async () => {
+    it("renders google sign-in method row", async () => {
       await act(async () => {
         return render(await SettingsPage());
       });
       expect(screen.getByText("Google")).toBeInTheDocument();
     });
 
-    it("shows Connected badge when Google is linked", async () => {
+    it("shows connected badge when google is linked", async () => {
       await act(async () => {
         return render(await SettingsPage());
       });
       expect(screen.getByText("Connected")).toBeInTheDocument();
     });
 
-    it("shows Not connected badge when Google is not linked", async () => {
+    it("shows not connected badge when google is not linked", async () => {
       setMockUser({
         user: {
           email: exampleUser.user.email,
@@ -223,14 +223,14 @@ describe("SettingsPage", () => {
       expect(screen.getByText("Not connected")).toBeInTheDocument();
     });
 
-    it("shows Unlink button when Google is connected", async () => {
+    it("shows unlink button when google is connected", async () => {
       await act(async () => {
         return render(await SettingsPage());
       });
       expect(screen.getByTestId("google-unlink-btn")).toBeInTheDocument();
     });
 
-    it("shows Link button when Google is not connected", async () => {
+    it("shows link button when google is not connected", async () => {
       setMockUser({
         user: {
           email: exampleUser.user.email,
@@ -253,7 +253,7 @@ describe("SettingsPage", () => {
         });
       });
 
-      it("opens the Link Google dialog when the Link button is clicked", async () => {
+      it("opens link google confirmation dialog", async () => {
         await act(async () => {
           return render(await SettingsPage());
         });
@@ -267,7 +267,7 @@ describe("SettingsPage", () => {
         ).toBeInTheDocument();
       });
 
-      it("calls linkGoogleOAuth on continue and closes the dialog", async () => {
+      it("calls linkGoogleOAuth action on confirmation", async () => {
         mockedLinkGoogleOAuth.mockResolvedValue({
           success: true,
           message: "",
@@ -287,7 +287,7 @@ describe("SettingsPage", () => {
         });
       });
 
-      it("shows an error in the dialog when linkGoogleOAuth fails", async () => {
+      it("shows error message in dialog when linkGoogleOAuth fails", async () => {
         mockedLinkGoogleOAuth.mockResolvedValue({
           success: false,
           message: "",
@@ -310,7 +310,7 @@ describe("SettingsPage", () => {
     });
 
     describe("Unlink Google dialog", () => {
-      it("opens the Unlink Google dialog when the Link button is clicked", async () => {
+      it("opens unlink google confirmation dialog", async () => {
         await act(async () => {
           return render(await SettingsPage());
         });
@@ -324,7 +324,7 @@ describe("SettingsPage", () => {
         ).toBeInTheDocument();
       });
 
-      it("calls unlinkGoogleOAuth on continue and closes the dialog", async () => {
+      it("calls unlinkGoogleOAuth action on confirmation", async () => {
         mockedUnlinkGoogleOAuth.mockResolvedValue({
           success: true,
           message: "",
@@ -344,7 +344,7 @@ describe("SettingsPage", () => {
         });
       });
 
-      it("shows an error in the dialog when unlinkGoogleOAuth fails", async () => {
+      it("shows error message in dialog when unlinkGoogleOAuth fails", async () => {
         mockedUnlinkGoogleOAuth.mockResolvedValue({
           success: false,
           message: "",
@@ -372,7 +372,7 @@ describe("SettingsPage", () => {
       await user.click(screen.getByRole("tab", { name: /security/i }));
     }
 
-    it("renders both session sign-out buttons", async () => {
+    it("renders sign-out buttons in security tab", async () => {
       await act(async () => {
         return render(await SettingsPage());
       });
@@ -390,7 +390,7 @@ describe("SettingsPage", () => {
     });
 
     describe("Sign out of other sessions", () => {
-      it("opens the confirmation dialog when the button is clicked", async () => {
+      it("opens sign out others confirmation dialog", async () => {
         await act(async () => {
           return render(await SettingsPage());
         });
@@ -407,7 +407,7 @@ describe("SettingsPage", () => {
         ).toBeInTheDocument();
       });
 
-      it("calls signOut with scope 'others'", async () => {
+      it("calls signOut action with 'others' scope", async () => {
         mockedSignOut.mockResolvedValue({
           success: true,
           message: "",
@@ -430,7 +430,7 @@ describe("SettingsPage", () => {
         });
       });
 
-      it("shows an error message when signing out others fails", async () => {
+      it("shows error message when signing out others fails", async () => {
         mockedSignOut.mockResolvedValue({
           success: false,
           message: "",
@@ -455,7 +455,7 @@ describe("SettingsPage", () => {
     });
 
     describe("Sign out of all sessions", () => {
-      it("opens the confirmation dialog when the button is clicked", async () => {
+      it("opens sign out all confirmation dialog", async () => {
         await act(async () => {
           return render(await SettingsPage());
         });
@@ -473,7 +473,7 @@ describe("SettingsPage", () => {
         ).toBeInTheDocument();
       });
 
-      it("calls signOut with scope 'global'", async () => {
+      it("calls signOut action with 'global' scope", async () => {
         mockedSignOut.mockResolvedValue({
           success: true,
           message: "",
@@ -495,7 +495,7 @@ describe("SettingsPage", () => {
         });
       });
 
-      it("shows an error message when signing out everywhere fails", async () => {
+      it("shows error message when signing out all fails", async () => {
         mockedSignOut.mockResolvedValue({
           success: false,
           message: "",

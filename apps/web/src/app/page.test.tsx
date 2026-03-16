@@ -1,5 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
+import {
+  exampleUser,
+  unauthorizedError,
+  userNotFoundError,
+} from "@spnd/constants/tests";
 import { render, screen } from "@testing-library/react";
+import { act } from "react";
 import Home from "./page";
 
 jest.mock("@/lib/supabase/server", () => {
@@ -17,40 +23,47 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-describe("Home", () => {
-  it("renders welcome message for authenticated user", async () => {
-    const mockUser = { email: "test@example.com" };
-    const { auth } = await (createClient as jest.Mock)();
-    (auth.getUser as jest.Mock).mockResolvedValue({
-      data: { user: mockUser },
-      error: null,
+describe("Home Page", () => {
+  describe("User State Rendering", () => {
+    it("renders welcome message for authenticated user", async () => {
+      const { auth } = await (createClient as jest.Mock)();
+      (auth.getUser as jest.Mock).mockResolvedValue({
+        data: exampleUser,
+        error: null,
+      });
+
+      await act(async () => {
+        return render(await Home());
+      });
+      expect(
+        screen.getByText(`Welcome back, ${exampleUser.user.email}`),
+      ).toBeInTheDocument();
     });
 
-    render(await Home());
-    expect(
-      screen.getByText(`Welcome back, ${mockUser.email}`),
-    ).toBeInTheDocument();
-  });
+    it("renders 'User not found' when no user is returned", async () => {
+      const { auth } = await (createClient as jest.Mock)();
+      (auth.getUser as jest.Mock).mockResolvedValue({
+        data: { user: null },
+        error: null,
+      });
 
-  it("renders 'User not found' when no user is returned", async () => {
-    const { auth } = await (createClient as jest.Mock)();
-    (auth.getUser as jest.Mock).mockResolvedValue({
-      data: { user: null },
-      error: null,
+      await act(async () => {
+        return render(await Home());
+      });
+      expect(screen.getByText(userNotFoundError)).toBeInTheDocument();
     });
 
-    render(await Home());
-    expect(screen.getByText("User not found")).toBeInTheDocument();
-  });
+    it("renders 'Unauthorized' when auth error occurs", async () => {
+      const { auth } = await (createClient as jest.Mock)();
+      (auth.getUser as jest.Mock).mockResolvedValue({
+        data: { user: null },
+        error: { message: "" },
+      });
 
-  it("renders 'Unauthorized' when an error is returned", async () => {
-    const { auth } = await (createClient as jest.Mock)();
-    (auth.getUser as jest.Mock).mockResolvedValue({
-      data: { user: null },
-      error: { message: "Auth error" },
+      await act(async () => {
+        return render(await Home());
+      });
+      expect(screen.getByText(unauthorizedError)).toBeInTheDocument();
     });
-
-    render(await Home());
-    expect(screen.getByText("Unauthorized")).toBeInTheDocument();
   });
 });
