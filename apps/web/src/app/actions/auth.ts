@@ -132,7 +132,7 @@ export async function signOut(opts: SignOut): Promise<AuthFormState> | never {
   }
 
   revalidatePath("/", "layout");
-  redirect("/");
+  redirect("/login");
 }
 
 export async function changeEmail(

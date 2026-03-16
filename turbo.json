@@ -41,12 +41,12 @@
     },
     "test:ui": {
       "dependsOn": ["^build"],
-      "cache": true,
+      "cache": false,
       "persistent": false
     },
     "test:headed": {
       "dependsOn": ["^build"],
-      "cache": true,
+      "cache": false,
       "persistent": false
     },
     "stop": {
