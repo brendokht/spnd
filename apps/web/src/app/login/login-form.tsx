@@ -1,17 +1,13 @@
 "use client";
 
-import {
-  AuthFormState,
-  googleOAuthLogin,
-  sendMagicLink,
-  verifyOtp,
-} from "@/app/actions/auth";
+import { googleOAuthLogin, sendMagicLink, verifyOtp } from "@/app/actions/auth";
 import { zodResolver } from "@hookform/resolvers/zod";
 import type {
   MagicLinkSchemaType,
   OtpSchemaType,
 } from "@spnd/shared-types/auth";
 import { MagicLinkSchema, OtpSchema } from "@spnd/shared-types/auth";
+import { type FormState, initialState } from "@spnd/shared-types/forms";
 import { GoogleIcon } from "@spnd/ui/components/company-icons/google";
 import { Button } from "@spnd/ui/components/ui/button";
 import {
@@ -40,48 +36,36 @@ export default function LoginForm() {
   );
 
   const [magicLinkState, magicLinkAction, magicLinkPending] = useActionState(
-    async (state: AuthFormState | undefined, payload: FormData | null) => {
+    async (state: FormState | undefined, payload: FormData | null) => {
       /*
        * Normally would just pass the Server Action, however we need a way
-       * to reset the state.
+       * to reset the state. No errors needs to be passed.
        */
       if (payload === null) {
-        return {
-          success: false,
-          message: "",
-          errors: [],
-        };
+        return initialState;
       }
 
       const response = await sendMagicLink(state, payload);
 
       return response;
     },
-    {
-      success: false,
-      message: "",
-      errors: [],
-    },
+    initialState,
   );
   const [verifyOtpState, verifyOtpAction, verifyOtpPending] = useActionState(
-    async (state: AuthFormState | undefined, payload: FormData | null) => {
+    async (state: FormState | undefined, payload: FormData | null) => {
       /*
        * Normally would just pass the Server Action, however we need a way
-       * to reset the state.
+       * to reset the state. No errors needs to be passed.
        */
       if (payload === null) {
-        return {
-          success: false,
-          message: "",
-          errors: [],
-        };
+        return initialState;
       }
 
       const response = await verifyOtp(state, payload);
 
       return response;
     },
-    { success: false, message: "", errors: [] },
+    initialState,
   );
 
   const magicLinkForm = useForm<MagicLinkSchemaType>({
@@ -224,7 +208,8 @@ export default function LoginForm() {
                   {fieldState.invalid && (
                     <FieldError errors={[fieldState.error]} />
                   )}
-                  {verifyOtpState.errors &&
+                  {!verifyOtpState.success &&
+                    verifyOtpState.errors &&
                     verifyOtpState.errors.map((error) => (
                       <FieldError key={error}>{error}</FieldError>
                     ))}

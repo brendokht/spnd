@@ -18,7 +18,8 @@
     ]
   },
   "exports": {
-    "./tests": "./src/tests/index.ts"
+    "./tests": "./src/tests/index.ts",
+    "./auth": "./src/auth/index.ts"
   },
   "devDependencies": {
     "typescript": "5.9.2",

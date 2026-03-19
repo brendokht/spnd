@@ -1,9 +1,9 @@
 {
   "extends": "@spnd/typescript-config/nextjs.json",
   "compilerOptions": {
-    "baseUrl": "./src",
+    "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./src/*"]
     },
     "plugins": [
       {
@@ -13,8 +13,11 @@
     "strictNullChecks": true
   },
   "include": [
-    "**/*.ts",
-    "**/*.tsx",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "jest.config.ts",
+    "jest.setup.ts",
+    "src/**/*.tsx",
     "next-env.d.ts",
     "next.config.js",
     ".next/types/**/*.ts"
