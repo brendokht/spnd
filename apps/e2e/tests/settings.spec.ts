@@ -1,5 +1,9 @@
 import { expect, test } from "@playwright/test";
-import { changeEmailSuccess, newUser, oauthUser } from "@spnd/constants/tests";
+import {
+  changeEmailSuccess,
+  notTakenUser,
+  oauthUser,
+} from "@spnd/constants/tests";
 import { OAUTH_USER_STORAGE_STATE } from "../playwright.config";
 
 // Uses authenticated storageState from playwright.config.ts (via "chromium" project)
@@ -43,7 +47,7 @@ test.describe("Settings Page", () => {
         await page.goto("/settings");
         await page.waitForLoadState("networkidle");
 
-        await page.getByLabel(/email/i).fill(newUser.user.email);
+        await page.getByLabel(/email/i).fill(notTakenUser.email);
         await page.getByRole("button", { name: /submit/i }).click();
         await expect(page.getByText(changeEmailSuccess)).toBeVisible();
       });

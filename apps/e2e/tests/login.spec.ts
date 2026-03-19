@@ -24,7 +24,7 @@ test.describe("Login Page", () => {
       page,
     }) => {
       await page.goto("/login");
-      await page.getByLabel(/email/i).fill(exampleUser.user.email);
+      await page.getByLabel(/email/i).fill(exampleUser.email);
       await page.getByRole("button", { name: /send magic link/i }).click();
       await expect(page.getByTestId("otp-input")).toBeVisible();
       await expect(page.getByRole("button", { name: /verify/i })).toBeVisible();

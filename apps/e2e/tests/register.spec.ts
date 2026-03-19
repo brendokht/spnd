@@ -24,7 +24,7 @@ test.describe("Register Page", () => {
       page,
     }) => {
       await page.goto("/register");
-      await page.getByLabel(/email/i).fill(newUser.user.email);
+      await page.getByLabel(/email/i).fill(newUser.email);
       await page.getByRole("button", { name: /send magic link/i }).click();
       await expect(page.getByTestId("otp-input")).toBeVisible();
       await expect(page.getByRole("button", { name: /verify/i })).toBeVisible();
