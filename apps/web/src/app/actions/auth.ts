@@ -2,7 +2,11 @@
 
 import { appUrl } from "@/lib/config";
 import { createClient } from "@/lib/supabase/server";
-import { validateFormData } from "@/lib/validation-utils";
+import {
+  handleFormErrors,
+  handleFormSuccess,
+  validateFormData,
+} from "@/lib/validation-utils";
 import {
   ChangeEmailSchema,
   ChangeEmailSchemaType,
@@ -11,124 +15,95 @@ import {
   OtpSchema,
   type OtpSchemaType,
 } from "@spnd/shared-types/auth";
+import { FormState } from "@spnd/shared-types/forms";
 import { SignOut } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { Providers } from "@spnd/constants/auth";
 
 /*
  * Fake delay
  * await new Promise((resolve) => setTimeout(resolve, 750));
  */
-export type AuthFormState = {
-  success: boolean;
-  message: string;
-  errors: Array<string>;
-};
 
 export async function sendMagicLink(
-  prev: AuthFormState | undefined,
+  prev: FormState | undefined,
   formData: FormData,
-): Promise<AuthFormState> {
+): Promise<FormState> {
   const validationResult = validateFormData<MagicLinkSchemaType>(
     formData,
     MagicLinkSchema,
   );
 
-  if ("success" in validationResult) {
-    return validationResult;
+  if (!validationResult.ok) {
+    return validationResult.state;
   }
 
   const supabase = await createClient();
 
   const { error } = await supabase.auth.signInWithOtp({
-    email: validationResult.email,
+    email: validationResult.data.email,
     options: { emailRedirectTo: `${appUrl}/auth/callback` },
   });
 
   if (error) {
-    return {
-      success: false,
-      message: "",
-      errors: [error.message],
-    };
+    return handleFormErrors([error.message]);
   }
 
-  return {
-    success: true,
-    message: "Check your email for the magic link.",
-    errors: [],
-  };
+  return handleFormSuccess("Check your email for the magic link.");
 }
 
 export async function verifyOtp(
-  prev: AuthFormState | undefined,
+  prev: FormState | undefined,
   formData: FormData,
-): Promise<AuthFormState> | never {
+): Promise<FormState> | never {
   const validationResult = validateFormData<OtpSchemaType>(formData, OtpSchema);
 
-  if ("success" in validationResult) {
-    return validationResult;
+  if (!validationResult.ok) {
+    return validationResult.state;
   }
-
   const supabase = await createClient();
 
   const { error } = await supabase.auth.verifyOtp({
-    email: validationResult.email,
-    token: validationResult.otp,
-    type: "email",
+    email: validationResult.data.email,
+    token: validationResult.data.otp,
+    type: Providers.Email,
   });
 
   if (error) {
-    console.error(error.message);
-    return {
-      success: false,
-      message: "",
-      errors: [error.message],
-    };
+    return handleFormErrors([error.message]);
   }
 
   revalidatePath("/", "layout");
   redirect("/");
 }
 
-export async function googleOAuthLogin(): Promise<AuthFormState> | never {
+export async function googleOAuthLogin(): Promise<FormState> | never {
   const supabase = await createClient();
 
   const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: "google",
+    provider: Providers.Google,
     options: { redirectTo: `${appUrl}/auth/callback` },
   });
 
   if (error) {
-    return {
-      success: false,
-      message: "",
-      errors: [error.message],
-    };
+    return handleFormErrors([error.message]);
   }
 
   redirect(data.url);
 }
 
-export async function signOut(opts: SignOut): Promise<AuthFormState> | never {
+export async function signOut(opts: SignOut): Promise<FormState> | never {
   const supabase = await createClient();
 
   const { error } = await supabase.auth.signOut(opts);
 
   if (error) {
-    return {
-      success: false,
-      message: "",
-      errors: [error.message],
-    };
+    return handleFormErrors([error.message]);
   }
 
   if (opts.scope === "others") {
-    return {
-      success: true,
-      message: "All other sessions have been signed out",
-      errors: [],
-    };
+    return handleFormSuccess("All other sessions have been signed out");
   }
 
   revalidatePath("/", "layout");
@@ -136,111 +111,81 @@ export async function signOut(opts: SignOut): Promise<AuthFormState> | never {
 }
 
 export async function changeEmail(
-  prev: AuthFormState,
+  prev: FormState,
   formData: FormData,
-): Promise<AuthFormState> {
+): Promise<FormState> {
   const validationResult = validateFormData<ChangeEmailSchemaType>(
     formData,
     ChangeEmailSchema,
   );
 
-  if ("success" in validationResult) {
-    return validationResult;
+  if (!validationResult.ok) {
+    return validationResult.state;
   }
 
   const supabase = await createClient();
 
   const { error } = await supabase.auth.updateUser(
-    { email: validationResult.email },
-    { emailRedirectTo: "http://localhost:3000/settings" },
+    { email: validationResult.data.email },
+    { emailRedirectTo: `${appUrl}/settings` },
   );
 
   if (error) {
-    return {
-      success: false,
-      message: "",
-      errors: [error.message],
-    };
+    return handleFormErrors([error.message]);
   }
 
-  return {
-    success: true,
-    message: "Emails have been sent to the old and new email address",
-    errors: [],
-  };
+  return handleFormSuccess(
+    "Emails have been sent to the old and new email address",
+  );
 }
 
-export async function linkGoogleOAuth(): Promise<AuthFormState> | never {
+export async function linkGoogleOAuth(): Promise<FormState> | never {
   const supabase = await createClient();
 
   const { data, error } = await supabase.auth.linkIdentity({
-    provider: "google",
+    provider: Providers.Google,
     options: {
-      redirectTo: "http://localhost:3000/settings",
+      redirectTo: `${appUrl}/settings`,
     },
   });
 
   if (error) {
-    return {
-      success: false,
-      message: "",
-      errors: [error.message],
-    };
+    return handleFormErrors([error.message]);
   }
 
   redirect(data.url);
 }
 
-export async function unlinkGoogleOAuth(): Promise<AuthFormState> | never {
+export async function unlinkGoogleOAuth(): Promise<FormState> | never {
   const supabase = await createClient();
 
   const { data: userIdentitiesData, error: userIdentitiesError } =
     await supabase.auth.getUserIdentities();
 
   if (userIdentitiesError) {
-    return {
-      success: false,
-      message: "",
-      errors: [userIdentitiesError.message],
-    };
+    return handleFormErrors([userIdentitiesError.message]);
   }
 
   if (!userIdentitiesData) {
-    return {
-      success: false,
-      message: "",
-      errors: ["No identites to unlink"],
-    };
+    return handleFormErrors(["No identites to unlink"]);
   }
 
   const googleIdentity = userIdentitiesData.identities.find(
-    (i) => i.provider === "google",
+    (i) => i.provider === Providers.Google,
   );
 
   if (!googleIdentity) {
-    return {
-      success: false,
-      message: "",
-      errors: ["Google identity not found"],
-    };
+    return handleFormErrors(["Google identity not found"]);
   }
 
   const { error: unlinkError } =
     await supabase.auth.unlinkIdentity(googleIdentity);
 
   if (unlinkError) {
-    return {
-      success: false,
-      message: "",
-      errors: [unlinkError.message],
-    };
+    return handleFormErrors([unlinkError.message]);
   }
 
   revalidatePath("/", "layout");
 
-  return {
-    success: true,
-    message: "Google identity successfully unlinked",
-    errors: [],
-  };
+  return handleFormSuccess("Google identity successfully unlinked");
 }

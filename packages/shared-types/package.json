@@ -9,7 +9,8 @@
     "check-types": "tsc --noEmit"
   },
   "exports": {
-    "./auth": "./src/auth/index.ts"
+    "./auth": "./src/auth/index.ts",
+    "./forms": "./src/forms/index.ts"
   },
   "lint-staged": {
     "*.{ts,tsx}": [

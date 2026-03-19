@@ -63,13 +63,14 @@ import {
   signOut,
   unlinkGoogleOAuth,
 } from "../actions/auth";
+import { initialState } from "@spnd/shared-types/forms";
 
 function SignOutGlobalDialog() {
   const [open, setOpen] = useState<boolean>(false);
 
   const [signOutState, signOutAction, signOutPending] = useActionState(
     () => signOut({ scope: "global" }),
-    { success: false, message: "", errors: [] },
+    initialState,
   );
 
   const handleClick = async () => {
@@ -91,7 +92,8 @@ function SignOutGlobalDialog() {
             This will sign you out of all sessions, including your current one.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        {signOutState.errors &&
+        {!signOutState.success &&
+          signOutState.errors &&
           signOutState.errors.map((error) => (
             <p className="text-destructive text-end text-sm" key={error}>
               {error}
@@ -114,7 +116,7 @@ function SignOutOthersDialog() {
 
   const [signOutState, signOutAction, signOutPending] = useActionState(
     () => signOut({ scope: "others" }),
-    { success: false, message: "", errors: [] },
+    initialState,
   );
 
   const handleClick = async () => {
@@ -137,7 +139,8 @@ function SignOutOthersDialog() {
             current one.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        {signOutState.errors &&
+        {!signOutState.success &&
+          signOutState.errors &&
           signOutState.errors.map((error) => (
             <p className="text-destructive text-end text-sm" key={error}>
               {error}
@@ -157,7 +160,7 @@ function SignOutOthersDialog() {
 
 function ChangeEmailForm({ email }: { email: string }) {
   const [changeEmailState, changeEmailAction, changeEmailPending] =
-    useActionState(changeEmail, { success: false, message: "", errors: [] });
+    useActionState(changeEmail, initialState);
 
   const changeEmailForm = useForm<ChangeEmailSchemaType>({
     resolver: zodResolver(ChangeEmailSchema),
@@ -214,7 +217,8 @@ function ChangeEmailForm({ email }: { email: string }) {
                   {fieldState.invalid && (
                     <FieldError errors={[fieldState.error]} />
                   )}
-                  {changeEmailState.errors &&
+                  {!changeEmailState.success &&
+                    changeEmailState.errors &&
                     changeEmailState.errors.map((error) => (
                       <FieldError key={error}>{error}</FieldError>
                     ))}
@@ -246,7 +250,7 @@ function LinkGoogleOAuth() {
 
   const [linkGoogleState, likeGoogleAction, linkGooglePending] = useActionState(
     linkGoogleOAuth,
-    { success: false, message: "", errors: [] },
+    initialState,
   );
 
   const handleClick = async () => {
@@ -272,7 +276,8 @@ function LinkGoogleOAuth() {
             This will link your chosen Google account with your Spnd Account.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        {linkGoogleState.errors &&
+        {!linkGoogleState.success &&
+          linkGoogleState.errors &&
           linkGoogleState.errors.map((error) => (
             <p className="text-destructive text-end text-sm" key={error}>
               {error}
@@ -294,11 +299,7 @@ function UnlinkGoogleOAuth() {
   const [open, setOpen] = useState<boolean>(false);
 
   const [unlinkGoogleState, unlikeGoogleAction, unlinkGooglePending] =
-    useActionState(unlinkGoogleOAuth, {
-      success: false,
-      message: "",
-      errors: [],
-    });
+    useActionState(unlinkGoogleOAuth, initialState);
 
   const handleClick = async () => {
     startTransition(() => {
@@ -324,7 +325,8 @@ function UnlinkGoogleOAuth() {
             must have Magic Link enabled to do this.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        {unlinkGoogleState.errors &&
+        {!unlinkGoogleState.success &&
+          unlinkGoogleState.errors &&
           unlinkGoogleState.errors.map((error) => (
             <p className="text-destructive text-end text-sm" key={error}>
               {error}
