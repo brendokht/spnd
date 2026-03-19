@@ -19,12 +19,8 @@ import {
   unlinkGoogleOAuth,
 } from "../actions/auth";
 import SettingsPage from "./page";
-
-type RecursivePartial<T> = {
-  [P in keyof T]?: RecursivePartial<T[P]>;
-};
-
-const mockGetUser = jest.fn();
+import { checkUserSession } from "@/lib/validation-utils";
+import { makeUser, RecursivePartial } from "@/lib/test-utils";
 
 jest.mock("next/navigation", () => ({
   redirect: jest.fn(),
@@ -34,14 +30,8 @@ jest.mock("next/cache", () => ({
   revalidatePath: jest.fn(),
 }));
 
-jest.mock("@/lib/supabase/server", () => ({
-  createClient: jest.fn(() => {
-    return {
-      auth: {
-        getUser: mockGetUser,
-      },
-    };
-  }),
+jest.mock("@/lib/validation-utils", () => ({
+  checkUserSession: jest.fn(),
 }));
 
 jest.mock("@/app/actions/auth", () => ({
@@ -55,22 +45,15 @@ const mockedChangeEmail = jest.mocked(changeEmail);
 const mockedLinkGoogleOAuth = jest.mocked(linkGoogleOAuth);
 const mockedUnlinkGoogleOAuth = jest.mocked(unlinkGoogleOAuth);
 const mockedSignOut = jest.mocked(signOut);
+const mockedCheckUserSession = jest.mocked(checkUserSession);
 
 function setMockUser({ user }: { user: RecursivePartial<User> }) {
-  mockGetUser.mockResolvedValue({
-    data: { user },
-    error: null,
-  });
+  mockedCheckUserSession.mockResolvedValue(makeUser(user));
 }
 
 beforeEach(() => {
   jest.clearAllMocks();
-  setMockUser({
-    user: {
-      email: exampleUser.user.email,
-      identities: [{ provider: "email" }, { provider: "google" }],
-    },
-  });
+  setMockUser({ user: exampleUser });
 });
 
 describe("Settings Page", () => {
@@ -105,7 +88,7 @@ describe("Settings Page", () => {
       });
       const input = screen.getByLabelText(/email/i);
       expect(input).toBeInTheDocument();
-      expect(input).toHaveValue(exampleUser.user.email);
+      expect(input).toHaveValue(exampleUser.email);
     });
 
     it("disables submit button when email is unchanged", async () => {
@@ -124,7 +107,7 @@ describe("Settings Page", () => {
       const input = screen.getByLabelText(/email/i);
 
       await user.clear(input);
-      await user.type(input, newUser.user.email);
+      await user.type(input, newUser.email);
 
       expect(screen.getByRole("button", { name: /submit/i })).toBeEnabled();
     });
@@ -133,7 +116,6 @@ describe("Settings Page", () => {
       mockedChangeEmail.mockResolvedValue({
         success: true,
         message: changeEmailSuccess,
-        errors: [],
       });
 
       await act(async () => {
@@ -145,7 +127,7 @@ describe("Settings Page", () => {
       const input = screen.getByLabelText(/email/i);
 
       await user.clear(input);
-      await user.type(input, newUser.user.email);
+      await user.type(input, newUser.email);
       await user.click(screen.getByRole("button", { name: /^submit$/i }));
 
       await waitFor(() => {
@@ -155,7 +137,7 @@ describe("Settings Page", () => {
         );
 
         const formData = mockedChangeEmail.mock.calls[0]![1] as FormData;
-        expect(formData.get("email")).toBe(newUser.user.email);
+        expect(formData.get("email")).toBe(newUser.email);
         expect(screen.getByText(changeEmailSuccess)).toBeInTheDocument();
         expect(
           screen.getByRole("button", { name: /^submit$/i }),
@@ -166,7 +148,6 @@ describe("Settings Page", () => {
     it("shows error message when changeEmail action fails", async () => {
       mockedChangeEmail.mockResolvedValue({
         success: false,
-        message: "",
         errors: [duplicateEmailError],
       });
 
@@ -213,7 +194,7 @@ describe("Settings Page", () => {
     it("shows not connected badge when google is not linked", async () => {
       setMockUser({
         user: {
-          email: exampleUser.user.email,
+          email: exampleUser.email,
           identities: [{ provider: "email" }],
         },
       });
@@ -233,7 +214,7 @@ describe("Settings Page", () => {
     it("shows link button when google is not connected", async () => {
       setMockUser({
         user: {
-          email: exampleUser.user.email,
+          email: exampleUser.email,
           identities: [{ provider: "email" }],
         },
       });
@@ -247,7 +228,7 @@ describe("Settings Page", () => {
       beforeEach(() => {
         setMockUser({
           user: {
-            email: exampleUser.user.email,
+            email: exampleUser.email,
             identities: [{ provider: "email" }],
           },
         });
@@ -271,7 +252,6 @@ describe("Settings Page", () => {
         mockedLinkGoogleOAuth.mockResolvedValue({
           success: true,
           message: "",
-          errors: [],
         });
 
         const user = userEvent.setup({ delay: null });
@@ -290,7 +270,6 @@ describe("Settings Page", () => {
       it("shows error message in dialog when linkGoogleOAuth fails", async () => {
         mockedLinkGoogleOAuth.mockResolvedValue({
           success: false,
-          message: "",
           errors: [identityLinkFailedError],
         });
 
@@ -328,7 +307,6 @@ describe("Settings Page", () => {
         mockedUnlinkGoogleOAuth.mockResolvedValue({
           success: true,
           message: "",
-          errors: [],
         });
 
         const user = userEvent.setup({ delay: null });
@@ -347,7 +325,6 @@ describe("Settings Page", () => {
       it("shows error message in dialog when unlinkGoogleOAuth fails", async () => {
         mockedUnlinkGoogleOAuth.mockResolvedValue({
           success: false,
-          message: "",
           errors: [soleIdentityError],
         });
 
@@ -411,7 +388,6 @@ describe("Settings Page", () => {
         mockedSignOut.mockResolvedValue({
           success: true,
           message: "",
-          errors: [],
         });
         await act(async () => {
           return render(await SettingsPage());
@@ -433,7 +409,6 @@ describe("Settings Page", () => {
       it("shows error message when signing out others fails", async () => {
         mockedSignOut.mockResolvedValue({
           success: false,
-          message: "",
           errors: [signOutFailed],
         });
 
@@ -477,7 +452,6 @@ describe("Settings Page", () => {
         mockedSignOut.mockResolvedValue({
           success: true,
           message: "",
-          errors: [],
         });
         await act(async () => {
           return render(await SettingsPage());
@@ -498,7 +472,6 @@ describe("Settings Page", () => {
       it("shows error message when signing out all fails", async () => {
         mockedSignOut.mockResolvedValue({
           success: false,
-          message: "",
           errors: [signOutFailed],
         });
 

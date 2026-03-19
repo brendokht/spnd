@@ -87,14 +87,13 @@ describe("Register Page", () => {
       mockedSendMagicLink.mockResolvedValue({
         success: true,
         message: "Check your email for the magic link.",
-        errors: [],
       });
       const user = userEvent.setup({ delay: null });
       await act(async () => {
         return render(RegisterPage());
       });
 
-      await user.type(screen.getByLabelText(/email/i), newUser.user.email);
+      await user.type(screen.getByLabelText(/email/i), newUser.email);
       await user.keyboard("{Enter}");
 
       await waitFor(() => {
@@ -106,14 +105,13 @@ describe("Register Page", () => {
       mockedSendMagicLink.mockResolvedValue({
         success: true,
         message: "Check your email for the magic link.",
-        errors: [],
       });
       const user = userEvent.setup({ delay: null });
       await act(async () => {
         return render(RegisterPage());
       });
 
-      await user.type(screen.getByLabelText(/email/i), newUser.user.email);
+      await user.type(screen.getByLabelText(/email/i), newUser.email);
       await user.click(
         screen.getByRole("button", { name: /send magic link/i }),
       );
@@ -132,14 +130,13 @@ describe("Register Page", () => {
       mockedSendMagicLink.mockResolvedValue({
         success: true,
         message: "Check your email for the magic link.",
-        errors: [],
       });
       const user = userEvent.setup({ delay: null });
       await act(async () => {
         return render(RegisterPage());
       });
 
-      await user.type(screen.getByLabelText(/email/i), newUser.user.email);
+      await user.type(screen.getByLabelText(/email/i), newUser.email);
       await user.click(
         screen.getByRole("button", { name: /send magic link/i }),
       );
@@ -154,14 +151,13 @@ describe("Register Page", () => {
       mockedSendMagicLink.mockResolvedValue({
         success: true,
         message: "Check your email for the magic link.",
-        errors: [],
       });
       const user = userEvent.setup({ delay: null });
       await act(async () => {
         return render(RegisterPage());
       });
 
-      await user.type(screen.getByLabelText(/email/i), newUser.user.email);
+      await user.type(screen.getByLabelText(/email/i), newUser.email);
       await user.click(
         screen.getByRole("button", { name: /send magic link/i }),
       );
@@ -180,14 +176,13 @@ describe("Register Page", () => {
       mockedSendMagicLink.mockResolvedValue({
         success: true,
         message: "",
-        errors: [],
       });
       const user = userEvent.setup({ delay: null });
       await act(async () => {
         return render(RegisterPage());
       });
 
-      await user.type(screen.getByLabelText(/email/i), exampleUser.user.email);
+      await user.type(screen.getByLabelText(/email/i), exampleUser.email);
       await user.click(
         screen.getByRole("button", { name: /send magic link/i }),
       );
@@ -208,19 +203,17 @@ describe("Register Page", () => {
       mockedSendMagicLink.mockResolvedValue({
         success: true,
         message: "",
-        errors: [],
       });
       mockedVerifyOtp.mockResolvedValue({
         success: true,
         message: "",
-        errors: [],
       });
       const user = userEvent.setup({ delay: null });
       await act(async () => {
         return render(RegisterPage());
       });
 
-      await user.type(screen.getByLabelText(/email/i), newUser.user.email);
+      await user.type(screen.getByLabelText(/email/i), newUser.email);
       await user.click(
         screen.getByRole("button", { name: /send magic link/i }),
       );
@@ -238,19 +231,17 @@ describe("Register Page", () => {
       mockedSendMagicLink.mockResolvedValue({
         success: true,
         message: "Check your email for the magic link.",
-        errors: [],
       });
       mockedVerifyOtp.mockResolvedValue({
         success: true,
         message: "",
-        errors: [],
       });
       const user = userEvent.setup({ delay: null });
       await act(async () => {
         return render(RegisterPage());
       });
 
-      await user.type(screen.getByLabelText(/email/i), newUser.user.email);
+      await user.type(screen.getByLabelText(/email/i), newUser.email);
       await user.click(
         screen.getByRole("button", { name: /send magic link/i }),
       );
@@ -268,11 +259,9 @@ describe("Register Page", () => {
       mockedSendMagicLink.mockResolvedValue({
         success: true,
         message: "Check your email for the magic link.",
-        errors: [],
       });
       mockedVerifyOtp.mockResolvedValue({
         success: false,
-        message: "",
         errors: ["Token has expired or is invalid"],
       });
       const user = userEvent.setup({ delay: null });
@@ -280,7 +269,7 @@ describe("Register Page", () => {
         return render(RegisterPage());
       });
 
-      await user.type(screen.getByLabelText(/email/i), newUser.user.email);
+      await user.type(screen.getByLabelText(/email/i), newUser.email);
       await user.click(
         screen.getByRole("button", { name: /send magic link/i }),
       );
@@ -302,7 +291,6 @@ describe("Register Page", () => {
       mockedGoogleOAuthLogin.mockResolvedValue({
         success: true,
         message: "",
-        errors: [],
       });
       const user = userEvent.setup({ delay: null });
       await act(async () => {
