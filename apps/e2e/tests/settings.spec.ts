@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import {
   changeEmailSuccess,
+  duplicateEmailError,
   notTakenUser,
   oauthUser,
 } from "@spnd/constants/tests";
@@ -60,11 +61,7 @@ test.describe("Settings Page", () => {
 
         await page.getByLabel(/email/i).fill(oauthUser.email);
         await page.getByRole("button", { name: /submit/i }).click();
-        await expect(
-          page.getByText(
-            /a user with this email address has already been registered./i,
-          ),
-        ).toBeVisible();
+        await expect(page.getByText(duplicateEmailError)).toBeVisible();
       });
     });
 
