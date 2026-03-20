@@ -58,6 +58,42 @@
       "cache": false,
       "persistent": true
     },
+    "db:pull": {
+      "cache": false,
+      "persistent": false
+    },
+    "db:push": {
+      "cache": false,
+      "persistent": false
+    },
+    "db:diff": {
+      "cache": false,
+      "persistent": false
+    },
+    "db:reset": {
+      "cache": false,
+      "persistent": false
+    },
+    "db:migration:new": {
+      "cache": false,
+      "persistent": false
+    },
+    "db:migration:fetch": {
+      "cache": false,
+      "persistent": false
+    },
+    "db:migration:repair": {
+      "cache": false,
+      "persistent": false
+    },
+    "db:migration:up": {
+      "cache": false,
+      "persistent": false
+    },
+    "db:migration:down": {
+      "cache": false,
+      "persistent": false
+    },
     "@spnd/api#dev": {
       "dependsOn": ["@spnd/supabase#dev"],
       "persistent": true
