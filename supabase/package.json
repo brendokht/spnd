@@ -5,7 +5,17 @@
   "private": true,
   "scripts": {
     "dev": "supabase start",
-    "stop": "supabase stop"
+    "lint": "supabase db lint --fail-on error",
+    "stop": "supabase stop",
+    "db:pull": "supabase db pull",
+    "db:push": "supabase db push",
+    "db:diff": "supabase db diff",
+    "db:reset": "supabase db reset",
+    "db:migration:new": "supabase migration new",
+    "db:migration:fetch": "supabase migration fetch",
+    "db:migration:repair": "supabase migration repair",
+    "db:migration:up": "supabase migration up",
+    "db:migration:down": "supabase migration down"
   },
   "devDependencies": {
     "supabase": "^2.75.0"
