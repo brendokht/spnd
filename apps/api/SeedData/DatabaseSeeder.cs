@@ -3,75 +3,48 @@ using Api.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.SeedData;
-
 static class DatabaseSeeder
 {
     public static async Task SeedAsync(AppDbContext db)
     {
-        var userId1 = Guid.Parse("00000000-0000-0000-0000-000000000001");
-        var userId2 = Guid.Parse("00000000-0000-0000-0000-000000000002");
+        var userDirector = new UserDirector();
+        var userBuilder = new UserBuilder();
+        userDirector.Builder = userBuilder;
 
-        if (await db.AuthUsers.AnyAsync(u => u.Id == userId1 || u.Id == userId2).ConfigureAwait(false))
-            return;
+        List<UserBuilderData> userBuilderData = [
+            new () { Email = "test@example.com", IsGoogleUser = false },
+            new () { Email = "oauth@example.com", IsGoogleUser = true }
+        ];
 
-        var now = DateTimeOffset.UtcNow;
-
-        db.AuthUsers.Add(new AuthUser
+        foreach (var data in userBuilderData)
         {
-            Id = userId1,
-            InstanceId = Guid.Empty,
-            Aud = "authenticated",
-            Role = "authenticated",
-            Email = "test@example.com",
-            EncryptedPassword = BCrypt.Net.BCrypt.HashPassword("tester"),
-            EmailConfirmedAt = now,
-            RawAppMetaData = """{"provider":"email","providers":["email"]}""",
-            RawUserMetaData = "{}",
-            CreatedAt = now,
-            UpdatedAt = now,
-        });
+            var exists = await db.AuthUsers
+            .AnyAsync(u => u.Email == data.Email)
+            .ConfigureAwait(false);
 
-        db.AuthUsers.Add(new AuthUser
-        {
-            Id = userId2,
-            InstanceId = Guid.Empty,
-            Aud = "authenticated",
-            Role = "authenticated",
-            Email = "oauth@example.com",
-            EncryptedPassword = BCrypt.Net.BCrypt.HashPassword("tester"),
-            EmailConfirmedAt = now,
-            RawAppMetaData = """{"provider":"google","providers":["email", "google"]}""",
-            RawUserMetaData = """{"iss": "https://accounts.google.com", "sub": "000000000000000000001", "name": "John Google", "email": "oauth@example.com", "full_name": "John Google", "provider_id": "000000000000000000001", "email_verified": true, "phone_verified": false}""",
-            CreatedAt = now,
-            UpdatedAt = now,
-        });
+            if (exists) continue;
 
-        await db.SaveChangesAsync().ConfigureAwait(false);
+            if (data.IsGoogleUser)
+                userDirector.BuildGoogleUser(data.Email);
+            else
+                userDirector.BuildEmailUser(data.Email);
 
-        db.AuthIdentities.Add(new AuthIdentity
-        {
-            Id = userId1,
-            UserId = userId1,
-            IdentityData = $$"""{"sub":"{{userId1}}","email":"test@example.com"}""",
-            Provider = "email",
-            ProviderId = "test@example.com",
-            LastSignInAt = now,
-            CreatedAt = now,
-            UpdatedAt = now,
-        });
+            var (user, emailIdentity, googleIdentity) = userBuilder.GetAuthData();
 
-        db.AuthIdentities.Add(new AuthIdentity
-        {
-            Id = userId2,
-            UserId = userId2,
-            IdentityData = $$"""{"sub":"{{userId2}}","email":"oauth@example.com"}""",
-            Provider = "google",
-            ProviderId = "000000000000000000001",
-            LastSignInAt = now,
-            CreatedAt = now,
-            UpdatedAt = now,
-        });
+            db.AuthUsers.Add(user);
 
-        await db.SaveChangesAsync().ConfigureAwait(false);
+            await db.SaveChangesAsync().ConfigureAwait(false);
+
+            // Because of the email provider identity fix for users who sign up with Google
+            // We do not need to create the email identity for Google users here
+            // This may change in the future if the issue gets fixed
+            if (googleIdentity == null)
+                db.AuthIdentities.Add(emailIdentity);
+            else
+                db.AuthIdentities.Add(googleIdentity);
+
+            await db.SaveChangesAsync().ConfigureAwait(false);
+        }
+
     }
 }

@@ -26,7 +26,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     }
 }
 
-internal sealed class AuthUser
+public sealed class AuthUser
 {
     public Guid Id { get; set; }
     public Guid InstanceId { get; set; }
@@ -45,13 +45,13 @@ internal sealed class AuthUser
     public string EmailChange { get; set; } = "";
 }
 
-internal sealed class AuthIdentity
+public sealed class AuthIdentity
 {
     public Guid Id { get; set; }
     public Guid UserId { get; set; }
-    public string IdentityData { get; set; } = "{}";
-    public string Provider { get; set; } = "";
     public string ProviderId { get; set; } = "";
+    public string Provider { get; set; } = "";
+    public string IdentityData { get; set; } = "{}";
     public DateTimeOffset? LastSignInAt { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
