@@ -1,6 +1,7 @@
 using System.Text.Json;
 
-using Api.Data;
+using Api.Data.Entities;
+using Api.Data.Enums;
 
 namespace Api.SeedData;
 
@@ -16,7 +17,7 @@ public class UserBuilder : IUserBuilder
     private AuthUser _authUser = new AuthUser();
 
     private AuthIdentity _authIdentityEmail = new AuthIdentity();
-    private AuthIdentity? _authIdentityGoogle = null;
+    private AuthIdentity? _authIdentityGoogle;
     private DateTimeOffset _now;
 
     public UserBuilder()
@@ -55,7 +56,7 @@ public class UserBuilder : IUserBuilder
         {
             Id = Guid.NewGuid(),
             UserId = newId,
-            Provider = "email",
+            Provider = Providers.Email,
             ProviderId = newId.ToString(),
             IdentityData = JsonSerializer.Serialize(rawUserMetaData),
             CreatedAt = now,
@@ -84,8 +85,8 @@ public class UserBuilder : IUserBuilder
 
         var rawAppMetaData = new
         {
-            provider = "email",
-            providers = new[] { "email" },
+            provider = Providers.Email,
+            providers = new[] { Providers.Email },
         };
 
         this._authUser.RawAppMetaData = JsonSerializer.Serialize(rawAppMetaData);
@@ -97,8 +98,8 @@ public class UserBuilder : IUserBuilder
 
         var rawAppMetaData = new
         {
-            provider = "google",
-            providers = new[] { "email", "google" },
+            provider = Providers.Google,
+            providers = new[] { Providers.Email, Providers.Google },
         };
 
         this._authUser.RawAppMetaData = JsonSerializer.Serialize(rawAppMetaData);
@@ -121,7 +122,7 @@ public class UserBuilder : IUserBuilder
         {
             Id = Guid.NewGuid(),
             UserId = this._authUser.Id,
-            Provider = "google",
+            Provider = Providers.Google,
             ProviderId = googleGuid.ToString(),
             IdentityData = this._authUser.RawUserMetaData,
             CreatedAt = this._now,
